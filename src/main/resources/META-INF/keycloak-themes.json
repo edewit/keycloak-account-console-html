@@ -1,0 +1,8 @@
+{
+  "themes": [
+    {
+      "name": "account-console-html",
+      "types": ["account"]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "keycloak-account-console-html",
+  "version": "1.0.0-SNAPSHOT",
+  "private": true,
+  "description": "Account console theme with simple HTML pages that use the Account REST API.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "mvn -q package -DskipTests",
+    "start-keycloak": "node scripts/start-keycloak.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "keycloak-runner": "0.0.1-alpha.3"
+  }
+}

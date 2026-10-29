@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Account</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 2rem;
+        line-height: 1.5;
+      }
+      code {
+        font-size: 0.9em;
+      }
+      #env {
+        white-space: pre-wrap;
+        padding: 1rem;
+        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+        border-radius: 0.5rem;
+        max-width: 40rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Account</h1>
+    <p>
+      HTML account console scaffold. Pages will call the Account REST API from
+      the browser.
+    </p>
+    <h2>Environment</h2>
+    <pre id="env">Loading…</pre>
+    <script type="module">
+      const envEl = document.getElementById("env");
+      try {
+        const response = await fetch("account/environment.json");
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const env = await response.json();
+        envEl.textContent = JSON.stringify(env, null, 2);
+      } catch (error) {
+        envEl.textContent = `Failed to load environment.json: ${error}`;
+      }
+    </script>
+    <test-css text="hello" />
+
+    <script type="module">
+      customElements.define(
+        "test-css",
+        class extends HTMLElement {
+          constructor() {
+            super();
+
+            const pElem = document.createElement("p");
+            pElem.textContent = this.getAttribute("text");
+
+            const shadowRoot = this.attachShadow({ mode: "open" });
+            shadowRoot.appendChild(pElem);
+          }
+        },
+      );
+    </script>
+  </body>
+</html>
