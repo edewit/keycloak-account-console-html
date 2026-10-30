@@ -4,7 +4,7 @@
     <base href="account/" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Account</title>
+    <title>Personal info</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -13,48 +13,30 @@
       body {
         margin: 2rem;
         line-height: 1.5;
+        display: grid;
+        gap: 2rem;
+        grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+        align-items: start;
       }
-      code {
-        font-size: 0.9em;
-      }
-      #env {
-        white-space: pre-wrap;
-        padding: 1rem;
-        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-        border-radius: 0.5rem;
-        max-width: 40rem;
+      @media (max-width: 40rem) {
+        body {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
     <script type="importmap">
       {
         "imports": {
-          "lit": "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js"
+          "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm",
+          "keycloak-js": "https://cdn.jsdelivr.net/npm/keycloak-js/+esm"
         }
       }
     </script>
     <script src="resource/js/nav.js" type="module"></script>
+    <script src="resource/js/personal-info.js" type="module"></script>
   </head>
   <body>
-    <h1>Account</h1>
-    <p>
-      HTML account console scaffold. Pages will call the Account REST API from
-      the browser.
-    </p>
-    <h2>Environment</h2>
-    <pre id="env">Loading…</pre>
-    <script type="module">
-      const envEl = document.getElementById("env");
-      try {
-        const response = await fetch("environment.json");
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        const env = await response.json();
-        envEl.textContent = JSON.stringify(env, null, 2);
-      } catch (error) {
-        envEl.textContent = `Failed to load environment.json: ${error}`;
-      }
-    </script>
     <account-sidebar></account-sidebar>
+    <account-personal-info></account-personal-info>
   </body>
 </html>
