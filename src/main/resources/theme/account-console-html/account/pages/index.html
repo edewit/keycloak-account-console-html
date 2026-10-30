@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <base href="account/" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Account</title>
@@ -24,6 +25,14 @@
         max-width: 40rem;
       }
     </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "lit": "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js"
+        }
+      }
+    </script>
+    <script src="resource/js/nav.js" type="module"></script>
   </head>
   <body>
     <h1>Account</h1>
@@ -36,7 +45,7 @@
     <script type="module">
       const envEl = document.getElementById("env");
       try {
-        const response = await fetch("account/environment.json");
+        const response = await fetch("environment.json");
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
@@ -46,23 +55,6 @@
         envEl.textContent = `Failed to load environment.json: ${error}`;
       }
     </script>
-    <test-css text="hello" />
-
-    <script type="module">
-      customElements.define(
-        "test-css",
-        class extends HTMLElement {
-          constructor() {
-            super();
-
-            const pElem = document.createElement("p");
-            pElem.textContent = this.getAttribute("text");
-
-            const shadowRoot = this.attachShadow({ mode: "open" });
-            shadowRoot.appendChild(pElem);
-          }
-        },
-      );
-    </script>
+    <account-sidebar></account-sidebar>
   </body>
 </html>

@@ -16,6 +16,7 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriBuilder;
 
 import org.jboss.logging.Logger;
 import org.keycloak.common.Version;
@@ -30,6 +31,7 @@ import org.keycloak.services.managers.Auth;
 import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.resource.AccountResourceProvider;
 import org.keycloak.services.resources.RealmsResource;
+import org.keycloak.services.resources.ThemeResource;
 import org.keycloak.theme.Theme;
 import org.keycloak.urls.UrlType;
 import org.keycloak.util.JsonSerialization;
@@ -84,6 +86,26 @@ public class HtmlAccountResourceProvider implements AccountResourceProvider {
     @Produces(MediaType.TEXT_HTML)
     public Response getIndex() throws IOException {
         return servePage("index");
+    }
+
+    @GET
+    @Path("resource/{path:.*}")
+    public Response getResource(@PathParam("path") String path) {
+        if (path == null || path.isBlank() || path.contains("..") || path.startsWith("/") || path.contains("\\")) {
+            throw new NotFoundException();
+        }
+
+        URI location = UriBuilder.fromUri(session.getContext().getUri(UrlType.FRONTEND).getBaseUri())
+                .path(ThemeResource.class)
+                .path("/{version}/{themeType}/{themeName}/{path}")
+                .build(new Object[] {
+                        Version.RESOURCES_VERSION,
+                        Theme.Type.ACCOUNT.toString().toLowerCase(),
+                        theme.getName(),
+                        path
+                }, false);
+
+        return Response.temporaryRedirect(location).build();
     }
 
     @GET
