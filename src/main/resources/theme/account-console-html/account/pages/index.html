@@ -5,25 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Personal info</title>
-    <style>
-      :root {
-        color-scheme: light dark;
-        font-family: system-ui, sans-serif;
-      }
-      body {
-        margin: 2rem;
-        line-height: 1.5;
-        display: grid;
-        gap: 2rem;
-        grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
-        align-items: start;
-      }
-      @media (max-width: 40rem) {
-        body {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="resource/css/tokens.css" />
     <script type="importmap">
       {
         "imports": {
@@ -32,11 +14,12 @@
         }
       }
     </script>
-    <script src="resource/js/nav.js" type="module"></script>
+    <script src="resource/js/components/shell.js" type="module"></script>
     <script src="resource/js/personal-info.js" type="module"></script>
   </head>
   <body>
-    <account-sidebar></account-sidebar>
-    <account-personal-info></account-personal-info>
+    <account-shell>
+      <account-personal-info></account-personal-info>
+    </account-shell>
   </body>
 </html>

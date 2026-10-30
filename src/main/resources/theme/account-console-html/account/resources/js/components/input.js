@@ -1,30 +1,35 @@
 import { LitElement, html, css, nothing } from "lit";
 
 /**
- * Form control driven by Keycloak user-profile attribute metadata.
+ * Primitive form control (form-associated).
  *
- *   <account-input name="email" .attribute=${attr} value="a@b.c"></account-input>
+ *   <account-input name="email" type="email" value="a@b.c" required></account-input>
+ *   <account-input name="bio" type="textarea"></account-input>
+ *   <account-input name="locale" type="select" .options=${["en","nl"]}></account-input>
  *
- * Form-associated so values participate in parent `<form>` FormData.
- * Style via `--account-input-*` or ::part(input).
+ * Style via shared tokens / `--account-input-*` or ::part(input).
  */
 export class AccountInput extends LitElement {
   static formAssociated = true;
 
   static properties = {
     name: { type: String, reflect: true },
-    /** @type {Record<string, unknown> | undefined} */
-    attribute: { attribute: false },
+    type: { type: String, reflect: true },
     value: { type: String },
     /** @type {string[]} */
     values: { attribute: false },
+    /** @type {string[]} */
+    options: { attribute: false },
+    required: { type: Boolean, reflect: true },
     disabled: { type: Boolean, reflect: true },
+    readOnly: { type: Boolean, reflect: true, attribute: "readonly" },
+    placeholder: { type: String },
   };
 
   static styles = css`
     :host {
-      --account-input-border: color-mix(in srgb, currentColor 25%, transparent);
-      --account-input-radius: 0.35rem;
+      --account-input-border: var(--account-border-color, currentColor);
+      --account-input-radius: var(--account-radius, 0.35rem);
       --account-input-padding: 0.45rem 0.6rem;
 
       display: block;
@@ -62,51 +67,18 @@ export class AccountInput extends LitElement {
   constructor() {
     super();
     this.#internals = this.attachInternals();
+    this.type = "text";
     this.value = "";
     this.values = [];
+    this.options = [];
+    this.required = false;
     this.disabled = false;
+    this.readOnly = false;
+    this.placeholder = "";
   }
 
   createRenderRoot() {
     return this.attachShadow({ mode: "open", delegatesFocus: true });
-  }
-
-  /**
-   * @param {string | undefined} annotated
-   * @returns {string}
-   */
-  #inputType(annotated) {
-    if (typeof annotated !== "string" || !annotated) {
-      return "text";
-    }
-    if (
-      annotated === "textarea" ||
-      annotated === "select" ||
-      annotated === "multiselect"
-    ) {
-      return annotated;
-    }
-    if (annotated.startsWith("html5-")) {
-      return annotated.slice("html5-".length);
-    }
-    if (annotated.startsWith("html")) {
-      return annotated.substring("html".length + 2);
-    }
-    return annotated;
-  }
-
-  /** @returns {string} */
-  get #type() {
-    return this.#inputType(
-      /** @type {any} */ (this.attribute)?.annotations?.inputType,
-    );
-  }
-
-  /** @returns {string[]} */
-  get #options() {
-    const options =
-      /** @type {any} */ (this.attribute)?.validators?.options?.options;
-    return Array.isArray(options) ? options.map(String) : [];
   }
 
   /** @returns {string[]} */
@@ -160,15 +132,11 @@ export class AccountInput extends LitElement {
 
   render() {
     const name = this.name ?? "";
-    const required = Boolean(/** @type {any} */ (this.attribute)?.required);
-    const readOnly =
-      Boolean(/** @type {any} */ (this.attribute)?.readOnly) || this.disabled;
-    const inputType = this.#type;
-    const options = this.#options;
+    const inputType = this.type || "text";
+    const options = Array.isArray(this.options) ? this.options : [];
+    const blocked = this.disabled || this.readOnly;
     const value = this.#selectedValues[0] ?? "";
     const values = new Set(this.#selectedValues);
-    const placeholder =
-      /** @type {any} */ (this.attribute)?.annotations?.inputTypePlaceholder;
 
     if (inputType === "textarea") {
       return html`
@@ -176,8 +144,8 @@ export class AccountInput extends LitElement {
           part="input"
           id=${name}
           name=${name}
-          ?required=${required}
-          ?disabled=${readOnly}
+          ?required=${this.required}
+          ?disabled=${blocked}
           .value=${value}
           @input=${this.#onInput}
         ></textarea>
@@ -195,12 +163,12 @@ export class AccountInput extends LitElement {
           part="input"
           id=${name}
           name=${name}
-          ?required=${required}
-          ?disabled=${readOnly}
+          ?required=${this.required}
+          ?disabled=${blocked}
           ?multiple=${multiple}
           @change=${this.#onInput}
         >
-          ${!required && !multiple
+          ${!this.required && !multiple
             ? html`<option value=""></option>`
             : nothing}
           ${options.map(
@@ -219,11 +187,11 @@ export class AccountInput extends LitElement {
         part="input"
         id=${name}
         name=${name}
-        type=${inputType || "text"}
+        type=${inputType}
         .value=${value}
-        ?required=${required}
-        ?disabled=${readOnly}
-        placeholder=${placeholder ?? nothing}
+        ?required=${this.required}
+        ?disabled=${blocked}
+        placeholder=${this.placeholder || nothing}
         @input=${this.#onInput}
       />
     `;

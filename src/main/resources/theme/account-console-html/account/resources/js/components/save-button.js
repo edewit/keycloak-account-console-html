@@ -7,7 +7,7 @@ import { LitElement, html, css } from "lit";
  *   <account-save-button saving></account-save-button>
  *   <account-save-button label="Update" saving-label="Updating…"></account-save-button>
  *
- * Style via `--account-save-*` or ::part(button).
+ * Style via shared tokens / `--account-save-*` or ::part(button).
  */
 export class SaveButton extends LitElement {
   static properties = {
@@ -19,11 +19,10 @@ export class SaveButton extends LitElement {
 
   static styles = css`
     :host {
-      /* light-dark — not currentColor — so bg isn't tied to the button's own color. */
-      --account-save-radius: 0.35rem;
-      --account-save-padding: 0.5rem 1rem;
-      --account-save-bg: light-dark(#1b1b1b, #f0f0f0);
-      --account-save-fg: light-dark(#fff, #1b1b1b);
+      --account-save-radius: var(--account-radius, 0.35rem);
+      --account-save-padding: var(--account-button-padding, 0.5rem 1rem);
+      --account-save-bg: var(--account-button-bg, light-dark(#1b1b1b, #f0f0f0));
+      --account-save-fg: var(--account-button-fg, light-dark(#fff, #1b1b1b));
 
       display: inline-block;
     }

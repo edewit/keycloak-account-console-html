@@ -1,44 +1,25 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <base href="account/" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Account</title>
-    <style>
-      :root {
-        color-scheme: light dark;
-        font-family: system-ui, sans-serif;
-      }
-      body {
-        margin: 2rem;
-        line-height: 1.5;
-      }
-      code {
-        font-size: 0.9em;
-      }
-      #env {
-        white-space: pre-wrap;
-        padding: 1rem;
-        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-        border-radius: 0.5rem;
-        max-width: 40rem;
-      }
-    </style>
+    <title>Signing in</title>
+    <link rel="stylesheet" href="resource/css/tokens.css" />
     <script type="importmap">
       {
         "imports": {
-          "lit": "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js"
+          "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm",
+          "keycloak-js": "https://cdn.jsdelivr.net/npm/keycloak-js/+esm"
         }
       }
     </script>
-    <script src="resource/js/nav.js" type="module"></script>
+    <script src="resource/js/components/shell.js" type="module"></script>
   </head>
   <body>
-    <h1>Sigining in</h1>
-    <p>
-      HTML account console scaffold. Pages will call the Account REST API from
-      the browser.
-    </p>
-    <account-sidebar></account-sidebar>
+    <account-shell>
+      <h1>Signing in</h1>
+      <p>Manage how you sign in to your account.</p>
+    </account-shell>
   </body>
 </html>

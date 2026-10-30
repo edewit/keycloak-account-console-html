@@ -1,18 +1,23 @@
 import { LitElement, html, css, nothing } from "lit";
 import { getPersonalInfo, savePersonalInfo } from "./api.js";
+import {
+  ROOT_FIELDS,
+  attributeToInputProps,
+} from "./user-profile.js";
 import "./components/save-button.js";
 import "./components/input.js";
-
-const ROOT_FIELDS = new Set(["username", "email", "firstName", "lastName"]);
+import "./components/field.js";
 
 /**
  * Personal info form driven by Keycloak user profile metadata.
  *
  * Default fields come from `user.userProfileMetadata.attributes`. Override any
  * attribute by projecting into a slot named after the attribute, or append
- * extra fields with `slot="field"` (use a `name` so the value is saved):
+ * extra fields with `slot="field"` (use a `name` so the value is saved).
+ * Also overridable: `title`, `description`, `actions`.
  *
  *   <account-personal-info>
+ *     <h1 slot="title">My profile</h1>
  *     <div slot="email" class="field">
  *       <label for="email">Work email</label>
  *       <input id="email" name="email" type="email" />
@@ -23,10 +28,10 @@ const ROOT_FIELDS = new Set(["username", "email", "firstName", "lastName"]);
  *     </div>
  *   </account-personal-info>
  *
- * After load, `user` is set and a `load` event is dispatched with the user in
- * `detail` so slotted controls can fill their values.
+ * Events (bubbles, composed): `load`, cancelable `save`, `saved`, `error`.
  *
- * Style via `--account-personal-*` or ::part(form|field|label|input|actions|message).
+ * Style via shared tokens / `--account-personal-*` or
+ * ::part(form|field|label|input|actions|message).
  */
 export class PersonalInfo extends LitElement {
   static properties = {
@@ -40,15 +45,11 @@ export class PersonalInfo extends LitElement {
 
   static styles = css`
     :host {
-      --account-personal-gap: 1rem;
-      --account-personal-label-color: color-mix(
-        in srgb,
-        currentColor 70%,
-        transparent
-      );
-      --account-personal-max-width: 28rem;
-      --account-personal-error-color: #b42318;
-      --account-personal-success-color: #027a48;
+      --account-personal-gap: var(--account-gap, 1rem);
+      --account-personal-label-color: var(--account-label-color, currentColor);
+      --account-personal-max-width: var(--account-max-width, 28rem);
+      --account-personal-error-color: var(--account-error-color, #b42318);
+      --account-personal-success-color: var(--account-success-color, #027a48);
 
       display: block;
       max-width: var(--account-personal-max-width);
@@ -76,11 +77,6 @@ export class PersonalInfo extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 0.35rem;
-    }
-
-    label {
-      color: var(--account-personal-label-color);
-      font-size: 0.9rem;
     }
 
     .actions {
@@ -115,6 +111,22 @@ export class PersonalInfo extends LitElement {
     this.#load();
   }
 
+  /**
+   * @param {string} type
+   * @param {unknown} [detail]
+   * @param {{ cancelable?: boolean }} [options]
+   */
+  #emit(type, detail, options = {}) {
+    return this.dispatchEvent(
+      new CustomEvent(type, {
+        detail,
+        bubbles: true,
+        composed: true,
+        cancelable: Boolean(options.cancelable),
+      }),
+    );
+  }
+
   async #load() {
     this.status = "loading";
     this.message = "";
@@ -125,18 +137,13 @@ export class PersonalInfo extends LitElement {
         throw new Error("User profile metadata is not available");
       }
       this.status = "ready";
-      this.dispatchEvent(
-        new CustomEvent("load", {
-          detail: this.user,
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      this.#emit("load", this.user);
       this.updateComplete.then(() => this.#hydrateSlottedFields());
     } catch (error) {
       this.status = "error";
       this.messageTone = "error";
       this.message = error instanceof Error ? error.message : String(error);
+      this.#emit("error", { phase: "load", error, message: this.message });
     }
   }
 
@@ -201,19 +208,6 @@ export class PersonalInfo extends LitElement {
   }
 
   /**
-   * @param {string} raw
-   */
-  #displayName(raw) {
-    const match = /^\$\{(.+)\}$/.exec(raw);
-    if (!match) {
-      return raw;
-    }
-    return match[1]
-      .replace(/([a-z])([A-Z])/g, "$1 $2")
-      .replace(/^./, (c) => c.toUpperCase());
-  }
-
-  /**
    * @param {HTMLFormElement} form
    */
   #applyFormData(form) {
@@ -247,21 +241,27 @@ export class PersonalInfo extends LitElement {
     }
     this.#applyFormData(/** @type {HTMLFormElement} */ (event.target));
 
+    const { userProfileMetadata: _meta, ...payload } = this.user;
+    if (!this.#emit("save", { user: this.user, payload }, { cancelable: true })) {
+      return;
+    }
+
     this.status = "saving";
     this.message = "";
     this.messageTone = "";
     try {
-      const { userProfileMetadata: _meta, ...payload } = this.user;
       await savePersonalInfo(payload);
       this.user = await getPersonalInfo();
       this.status = "ready";
       this.messageTone = "success";
       this.message = "Account updated.";
+      this.#emit("saved", this.user);
       this.updateComplete.then(() => this.#hydrateSlottedFields());
     } catch (error) {
       this.status = "ready";
       this.messageTone = "error";
       this.message = error instanceof Error ? error.message : String(error);
+      this.#emit("error", { phase: "save", error, message: this.message });
     }
   }
 
@@ -269,23 +269,28 @@ export class PersonalInfo extends LitElement {
    * @param {any} attribute
    */
   #renderField(attribute) {
-    const label = this.#displayName(attribute.displayName || attribute.name);
+    const props = attributeToInputProps(attribute);
     return html`
-      <slot name=${attribute.name}>
-        <div class="field" part="field">
-          <label part="label" for=${attribute.name}
-            >${label}${attribute.required ? html` *` : nothing}</label
-          >
+      <slot name=${props.name}>
+        <account-field
+          part="field"
+          label=${props.label}
+          ?required=${props.required}
+        >
           <account-input
             part="input"
-            id=${attribute.name}
-            name=${attribute.name}
-            .attribute=${attribute}
-            .value=${this.#valueOf(attribute.name)}
-            .values=${this.#valuesOf(attribute.name)}
+            id=${props.name}
+            name=${props.name}
+            type=${props.type}
+            .options=${props.options}
+            placeholder=${props.placeholder ?? ""}
+            .value=${this.#valueOf(props.name)}
+            .values=${this.#valuesOf(props.name)}
+            ?required=${props.required}
+            ?readonly=${props.readOnly}
             ?disabled=${this.status === "saving"}
           ></account-input>
-        </div>
+        </account-field>
       </slot>
     `;
   }
@@ -305,21 +310,27 @@ export class PersonalInfo extends LitElement {
     const allReadOnly = attributes.every((attribute) => attribute.readOnly);
 
     return html`
-      <h1 part="title">Personal info</h1>
-      <p part="description" class="description">
-        Manage your basic information
-      </p>
+      <slot name="title">
+        <h1 part="title">Personal info</h1>
+      </slot>
+      <slot name="description">
+        <p part="description" class="description">
+          Manage your basic information
+        </p>
+      </slot>
       <form part="form" @submit=${this.#onSubmit}>
         ${attributes.map((attribute) => this.#renderField(attribute))}
         <slot name="field"></slot>
         ${allReadOnly
           ? nothing
           : html`
-              <div class="actions" part="actions">
-                <account-save-button
-                  ?saving=${this.status === "saving"}
-                ></account-save-button>
-              </div>
+              <slot name="actions">
+                <div class="actions" part="actions">
+                  <account-save-button
+                    ?saving=${this.status === "saving"}
+                  ></account-save-button>
+                </div>
+              </slot>
             `}
         ${this.message
           ? html`<p
