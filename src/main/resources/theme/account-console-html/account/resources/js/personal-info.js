@@ -1,5 +1,6 @@
 import { LitElement, html, css, nothing } from "lit";
 import { getPersonalInfo, savePersonalInfo } from "./api.js";
+import { consumeMessages } from "./i18n.js";
 import {
   ROOT_FIELDS,
   attributeToInputProps,
@@ -99,11 +100,18 @@ export class PersonalInfo extends LitElement {
     }
   `;
 
+  #i18n = consumeMessages(this);
+
   constructor() {
     super();
     this.status = "loading";
     this.message = "";
     this.messageTone = "";
+  }
+
+  /** @returns {(key: string, params?: Record<string, string | number>) => string} */
+  get #t() {
+    return this.#i18n.value?.t ?? ((key) => key);
   }
 
   connectedCallback() {
@@ -254,7 +262,7 @@ export class PersonalInfo extends LitElement {
       this.user = await getPersonalInfo();
       this.status = "ready";
       this.messageTone = "success";
-      this.message = "Account updated.";
+      this.message = this.#t("accountUpdatedMessage");
       this.#emit("saved", this.user);
       this.updateComplete.then(() => this.#hydrateSlottedFields());
     } catch (error) {
@@ -311,11 +319,11 @@ export class PersonalInfo extends LitElement {
 
     return html`
       <slot name="title">
-        <h1 part="title">Personal info</h1>
+        <h1 part="title">${this.#t("personalInfo")}</h1>
       </slot>
       <slot name="description">
         <p part="description" class="description">
-          Manage your basic information
+          ${this.#t("personalInfoDescription")}
         </p>
       </slot>
       <form part="form" @submit=${this.#onSubmit}>
@@ -327,6 +335,7 @@ export class PersonalInfo extends LitElement {
               <slot name="actions">
                 <div class="actions" part="actions">
                   <account-save-button
+                    label=${this.#t("save")}
                     ?saving=${this.status === "saving"}
                   ></account-save-button>
                 </div>

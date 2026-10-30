@@ -1,25 +1,31 @@
 import { LitElement, html, css, nothing } from "lit";
+import { consumeMessages } from "./i18n.js";
 
 /**
- * @typedef {{ label: string, href?: string, children?: NavLink[] }} NavLink
+ * @typedef {{
+ *   label?: string,
+ *   labelKey?: string,
+ *   href?: string,
+ *   children?: NavLink[],
+ * }} NavLink
  */
 
-/** Default account console menu (mirrors Keycloak content.json). */
+/** Default account console menu (mirrors Keycloak content.json / message keys). */
 export const DEFAULT_LINKS = Object.freeze([
-  { label: "Personal info", href: "../account" },
+  { labelKey: "personalInfo", href: "../account" },
   {
-    label: "Account security",
+    labelKey: "accountSecurity",
     children: [
-      { label: "Signing in", href: "signing-in.html" },
-      { label: "Device activity", href: "device-activity.html" },
-      { label: "Linked accounts", href: "linked-accounts.html" },
+      { labelKey: "signingIn", href: "signing-in.html" },
+      { labelKey: "deviceActivity", href: "device-activity.html" },
+      { labelKey: "linkedAccounts", href: "linked-accounts.html" },
     ],
   },
-  { label: "Applications", href: "applications.html" },
-  { label: "Groups", href: "groups.html" },
-  { label: "Organizations", href: "organizations.html" },
-  { label: "Resources", href: "resources.html" },
-  { label: "Verifiable credentials", href: "verifiable-credentials.html" },
+  { labelKey: "applications", href: "applications.html" },
+  { labelKey: "groups", href: "groups.html" },
+  { labelKey: "organizations", href: "organizations.html" },
+  { labelKey: "resources", href: "resources.html" },
+  { labelKey: "verifiableCredentialsTitle", href: "verifiable-credentials.html" },
 ]);
 
 /**
@@ -48,6 +54,23 @@ export class NavBar extends LitElement {
     /** @type {NavLink[] | undefined} */
     links: { type: Array },
   };
+
+  #i18n = consumeMessages(this);
+
+  /** @returns {(key: string, params?: Record<string, string | number>) => string} */
+  get #t() {
+    return this.#i18n.value?.t ?? ((key) => key);
+  }
+
+  /**
+   * @param {NavLink} item
+   */
+  #labelOf(item) {
+    if (item.labelKey) {
+      return this.#t(item.labelKey);
+    }
+    return item.label ?? "";
+  }
 
   static styles = css`
     :host {
@@ -186,10 +209,12 @@ export class NavBar extends LitElement {
    * @param {NavLink} item
    */
   #renderItem(item) {
+    const label = this.#labelOf(item);
+
     if (item.children?.length) {
       return html`
         <li part="group">
-          <span class="group-label" part="group-label">${item.label}</span>
+          <span class="group-label" part="group-label">${label}</span>
           <ul part="list">
             ${item.children.map((child) => this.#renderItem(child))}
           </ul>
@@ -208,7 +233,7 @@ export class NavBar extends LitElement {
           part=${active ? "link link-active" : "link"}
           href=${item.href}
           aria-current=${active ? "page" : nothing}
-          >${item.label}</a
+          >${label}</a
         >
       </li>
     `;

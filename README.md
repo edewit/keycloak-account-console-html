@@ -9,11 +9,13 @@ Requires **Keycloak 26.x**.
 - Theme `account-console-html` (`account` type)
 - Provider id `html-account` — serves `pages/*.html` from the theme
 - `GET …/account/environment.json` — bootstrap for keycloak-js / REST
+- Theme messages via `GET /resources/{realm}/account/{locale}` (parent `keycloak.v3`)
 - Shared design tokens (`resources/css/tokens.css`)
 - Lit web components under `resources/js/`
-  - `account-shell` — page chrome (sidebar + main)
+  - `account-shell` — page chrome; loads messages and provides Lit context
   - `account-sidebar` — navigation
   - `account-personal-info` — profile form (user-profile metadata driven)
+  - `account-signing-in` — credential types (password, OTP, passkeys, …)
   - `account-field`, `account-input`, `account-save-button` — form primitives
 
 ## Local development (live HTML)
@@ -71,6 +73,7 @@ In the Admin Console, set the realm **Account theme** to `account-console-html`.
       {
         "imports": {
           "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm",
+          "@lit/context": "https://cdn.jsdelivr.net/npm/@lit/context/+esm",
           "keycloak-js": "https://cdn.jsdelivr.net/npm/keycloak-js/+esm"
         }
       }
@@ -128,6 +131,49 @@ All bubble and are composed.
 | `saved` | After successful save | `detail` is the refreshed user |
 | `error` | Load or save failure | `detail` is `{ phase, error, message }` |
 
+### i18n (Lit context)
+
+`account-shell` fetches theme messages and provides them on `messagesContext`. Any descendant can consume:
+
+```js
+import { consumeMessages } from "./i18n.js";
+
+class MyPage extends LitElement {
+  #i18n = consumeMessages(this);
+
+  get #t() {
+    return this.#i18n.value?.t ?? ((key) => key);
+  }
+
+  render() {
+    return html`<h1>${this.#t("personalInfo")}</h1>`;
+  }
+}
+```
+
+`t(key, params?)` interpolates `{{name}}` / `{0}` and strips account-ui Trans tags (`<0>…</0>`).
+
+### Signing in (`account-signing-in`)
+
+Loads `/credentials` and groups types by category (basic / two-factor / passwordless). Set up, update, and delete call `keycloak.login({ action })` so Keycloak runs the matching required action.
+
+| Slot | Purpose |
+|------|---------|
+| `title` | Page heading |
+| `description` | Intro text |
+
+| Event | When | Notes |
+|-------|------|--------|
+| `load` | Credentials loaded | `detail` is the credential container list |
+| `action` | Before create/update/delete redirect | Cancelable; `detail` is `{ action, kind, type?, credentialId? }` |
+| `error` | Load or action failure | `detail` is `{ phase, error, message }` |
+
+```html
+<account-shell>
+  <account-signing-in></account-signing-in>
+</account-shell>
+```
+
 ```html
 <script type="module">
   const form = document.querySelector("account-personal-info");
@@ -146,6 +192,7 @@ Components also expose `::part(...)` hooks, for example:
 
 - `account-shell::part(layout|nav|main)`
 - `account-personal-info::part(form|field|actions|message)`
+- `account-signing-in::part(title|description|category|type|list|item|actions|message|empty)`
 - `account-input::part(input)`
 - `account-save-button::part(button)`
 
