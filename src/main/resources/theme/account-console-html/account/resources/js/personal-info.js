@@ -1,5 +1,7 @@
 import { LitElement, html, css, nothing } from "lit";
 import { getPersonalInfo, savePersonalInfo } from "./api.js";
+import "./components/save-button.js";
+import "./components/input.js";
 
 const ROOT_FIELDS = new Set(["username", "email", "firstName", "lastName"]);
 
@@ -44,16 +46,7 @@ export class PersonalInfo extends LitElement {
         currentColor 70%,
         transparent
       );
-      --account-personal-input-border: color-mix(
-        in srgb,
-        currentColor 25%,
-        transparent
-      );
-      --account-personal-input-radius: 0.35rem;
-      --account-personal-input-padding: 0.45rem 0.6rem;
       --account-personal-max-width: 28rem;
-      --account-personal-button-bg: currentColor;
-      --account-personal-button-fg: Canvas;
       --account-personal-error-color: #b42318;
       --account-personal-success-color: #027a48;
 
@@ -90,47 +83,10 @@ export class PersonalInfo extends LitElement {
       font-size: 0.9rem;
     }
 
-    input,
-    select,
-    textarea {
-      font: inherit;
-      padding: var(--account-personal-input-padding);
-      border: 1px solid var(--account-personal-input-border);
-      border-radius: var(--account-personal-input-radius);
-      background: transparent;
-      color: inherit;
-    }
-
-    textarea {
-      min-height: 5rem;
-      resize: vertical;
-    }
-
-    input:disabled,
-    select:disabled,
-    textarea:disabled {
-      opacity: 0.65;
-    }
-
     .actions {
       display: flex;
       gap: 0.75rem;
       align-items: center;
-    }
-
-    button[type="submit"] {
-      font: inherit;
-      cursor: pointer;
-      border: none;
-      border-radius: var(--account-personal-input-radius);
-      padding: 0.5rem 1rem;
-      background: var(--account-personal-button-bg);
-      color: var(--account-personal-button-fg);
-    }
-
-    button[type="submit"]:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
     }
 
     .message {
@@ -195,7 +151,13 @@ export class PersonalInfo extends LitElement {
    */
   #hydrateSlottedFields() {
     for (const el of this.querySelectorAll("[name]")) {
-      if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) {
+      if (
+        !(
+          el instanceof HTMLInputElement ||
+          el instanceof HTMLSelectElement ||
+          el instanceof HTMLTextAreaElement
+        )
+      ) {
         continue;
       }
       const value = this.#valueOf(el.name);
@@ -249,36 +211,6 @@ export class PersonalInfo extends LitElement {
     return match[1]
       .replace(/([a-z])([A-Z])/g, "$1 $2")
       .replace(/^./, (c) => c.toUpperCase());
-  }
-
-  /**
-   * @param {any} attribute
-   * @returns {string}
-   */
-  #inputType(attribute) {
-    const annotated = attribute.annotations?.inputType;
-    if (typeof annotated !== "string" || !annotated) {
-      return "text";
-    }
-    if (annotated === "textarea" || annotated === "select" || annotated === "multiselect") {
-      return annotated;
-    }
-    if (annotated.startsWith("html5-")) {
-      return annotated.slice("html5-".length);
-    }
-    if (annotated.startsWith("html")) {
-      return annotated.substring("html".length + 2);
-    }
-    return annotated;
-  }
-
-  /**
-   * @param {any} attribute
-   * @returns {string[]}
-   */
-  #options(attribute) {
-    const options = attribute.validators?.options?.options;
-    return Array.isArray(options) ? options.map(String) : [];
   }
 
   /**
@@ -336,70 +268,6 @@ export class PersonalInfo extends LitElement {
   /**
    * @param {any} attribute
    */
-  #renderControl(attribute) {
-    const name = attribute.name;
-    const required = Boolean(attribute.required);
-    const readOnly = Boolean(attribute.readOnly) || this.status === "saving";
-    const inputType = this.#inputType(attribute);
-    const options = this.#options(attribute);
-    const value = this.#valueOf(name);
-    const values = new Set(this.#valuesOf(name));
-
-    if (inputType === "textarea") {
-      return html`
-        <textarea
-          part="input"
-          id=${name}
-          name=${name}
-          ?required=${required}
-          ?disabled=${readOnly}
-          .value=${value}
-        ></textarea>
-      `;
-    }
-
-    if (inputType === "select" || inputType === "multiselect" || options.length) {
-      const multiple = inputType === "multiselect";
-      return html`
-        <select
-          part="input"
-          id=${name}
-          name=${name}
-          ?required=${required}
-          ?disabled=${readOnly}
-          ?multiple=${multiple}
-        >
-          ${!required && !multiple
-            ? html`<option value=""></option>`
-            : nothing}
-          ${options.map(
-            (option) => html`
-              <option value=${option} ?selected=${values.has(option)}>
-                ${option}
-              </option>
-            `,
-          )}
-        </select>
-      `;
-    }
-
-    return html`
-      <input
-        part="input"
-        id=${name}
-        name=${name}
-        type=${inputType || "text"}
-        .value=${value}
-        ?required=${required}
-        ?disabled=${readOnly}
-        placeholder=${attribute.annotations?.inputTypePlaceholder ?? nothing}
-      />
-    `;
-  }
-
-  /**
-   * @param {any} attribute
-   */
   #renderField(attribute) {
     const label = this.#displayName(attribute.displayName || attribute.name);
     return html`
@@ -408,7 +276,15 @@ export class PersonalInfo extends LitElement {
           <label part="label" for=${attribute.name}
             >${label}${attribute.required ? html` *` : nothing}</label
           >
-          ${this.#renderControl(attribute)}
+          <account-input
+            part="input"
+            id=${attribute.name}
+            name=${attribute.name}
+            .attribute=${attribute}
+            .value=${this.#valueOf(attribute.name)}
+            .values=${this.#valuesOf(attribute.name)}
+            ?disabled=${this.status === "saving"}
+          ></account-input>
         </div>
       </slot>
     `;
@@ -440,13 +316,9 @@ export class PersonalInfo extends LitElement {
           ? nothing
           : html`
               <div class="actions" part="actions">
-                <button
-                  type="submit"
-                  part="submit"
-                  ?disabled=${this.status === "saving"}
-                >
-                  ${this.status === "saving" ? "Saving…" : "Save"}
-                </button>
+                <account-save-button
+                  ?saving=${this.status === "saving"}
+                ></account-save-button>
               </div>
             `}
         ${this.message
