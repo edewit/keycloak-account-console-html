@@ -9,6 +9,35 @@ export const ROOT_FIELDS = new Set([
   "lastName",
 ]);
 
+/** Prefix for attribute override slots: `slot="attribute:department"`. */
+export const ATTRIBUTE_SLOT_PREFIX = "attribute:";
+
+/**
+ * Slot name used to replace a profile attribute control.
+ *
+ * @param {string} attributeName
+ * @returns {string}
+ */
+export function attributeSlotName(attributeName) {
+  return `${ATTRIBUTE_SLOT_PREFIX}${attributeName}`;
+}
+
+/**
+ * Normalize a form control `name` to a profile field / attribute key.
+ * Accepts bare names (`department`) or `attributes.department`.
+ *
+ * @param {string} name
+ * @returns {string}
+ */
+export function normalizeFieldName(name) {
+  if (typeof name !== "string") {
+    return "";
+  }
+  return name.startsWith("attributes.")
+    ? name.slice("attributes.".length)
+    : name;
+}
+
 /**
  * @param {string | undefined} annotated
  * @returns {string}

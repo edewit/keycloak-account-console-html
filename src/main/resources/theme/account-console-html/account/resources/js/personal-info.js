@@ -3,7 +3,9 @@ import { getPersonalInfo, savePersonalInfo } from "./api.js";
 import { consumeMessages } from "./i18n.js";
 import {
   ROOT_FIELDS,
+  attributeSlotName,
   attributeToInputProps,
+  normalizeFieldName,
 } from "./user-profile.js";
 import "./components/save-button.js";
 import "./components/input.js";
@@ -13,19 +15,23 @@ import "./components/field.js";
  * Personal info form driven by Keycloak user profile metadata.
  *
  * Default fields come from `user.userProfileMetadata.attributes`. Override any
- * attribute by projecting into a slot named after the attribute, or append
- * extra fields with `slot="field"` (use a `name` so the value is saved).
- * Also overridable: `title`, `description`, `actions`.
+ * attribute with `slot="attribute:<name>"` (preferred; avoids clashes with
+ * `title` / `description` / `actions` / `field`). Bare `slot="<name>"` still
+ * works. Append extras with `slot="field"` (include a `name` so the value is
+ * saved). Control names may be bare (`department`) or `attributes.department`.
  *
  *   <account-personal-info>
  *     <h1 slot="title">My profile</h1>
- *     <div slot="email" class="field">
- *       <label for="email">Work email</label>
- *       <input id="email" name="email" type="email" />
+ *     <div slot="attribute:department" class="field">
+ *       <label for="dept">Department</label>
+ *       <select name="attributes.department" id="dept">
+ *         <option value="engineering">Engineering</option>
+ *         <option value="product">Product</option>
+ *       </select>
  *     </div>
  *     <div slot="field" class="field">
- *       <label for="department">Department</label>
- *       <input id="department" name="department" />
+ *       <label for="nickname">Nickname</label>
+ *       <input id="nickname" name="nickname" />
  *     </div>
  *   </account-personal-info>
  *
@@ -74,7 +80,8 @@ export class PersonalInfo extends LitElement {
 
     .field,
     ::slotted(.field),
-    ::slotted([slot="field"]) {
+    ::slotted([slot="field"]),
+    ::slotted([slot^="attribute:"]) {
       display: flex;
       flex-direction: column;
       gap: 0.35rem;
@@ -175,9 +182,13 @@ export class PersonalInfo extends LitElement {
       ) {
         continue;
       }
-      const value = this.#valueOf(el.name);
+      const name = normalizeFieldName(el.name);
+      if (!name) {
+        continue;
+      }
+      const value = this.#valueOf(name);
       if (el instanceof HTMLSelectElement && el.multiple) {
-        const values = new Set(this.#valuesOf(el.name));
+        const values = new Set(this.#valuesOf(name));
         for (const option of el.options) {
           option.selected = values.has(option.value);
         }
@@ -192,15 +203,16 @@ export class PersonalInfo extends LitElement {
    * @returns {string[]}
    */
   #valuesOf(name) {
+    const key = normalizeFieldName(name);
     const user = this.user ?? {};
-    if (ROOT_FIELDS.has(name)) {
-      const value = user[name];
+    if (ROOT_FIELDS.has(key)) {
+      const value = user[key];
       return value == null || value === "" ? [] : [String(value)];
     }
     const attrs = /** @type {Record<string, string[] | string>} */ (
       user.attributes ?? {}
     );
-    const value = attrs[name];
+    const value = attrs[key];
     if (Array.isArray(value)) {
       return value.map(String);
     }
@@ -226,8 +238,12 @@ export class PersonalInfo extends LitElement {
       .../** @type {Record<string, string[]>} */ (user.attributes ?? {}),
     };
 
-    for (const name of names) {
-      const values = data.getAll(name).map(String).filter((v) => v !== "");
+    for (const rawName of names) {
+      const name = normalizeFieldName(rawName);
+      if (!name) {
+        continue;
+      }
+      const values = data.getAll(rawName).map(String).filter((v) => v !== "");
       if (ROOT_FIELDS.has(name)) {
         user[name] = values[0] ?? "";
       } else {
@@ -278,27 +294,32 @@ export class PersonalInfo extends LitElement {
    */
   #renderField(attribute) {
     const props = attributeToInputProps(attribute);
-    return html`
-      <slot name=${props.name}>
-        <account-field
-          part="field"
-          label=${props.label}
+    const defaultField = html`
+      <account-field
+        part="field"
+        label=${props.label}
+        ?required=${props.required}
+      >
+        <account-input
+          part="input"
+          id=${props.name}
+          name=${props.name}
+          type=${props.type}
+          .options=${props.options}
+          placeholder=${props.placeholder ?? ""}
+          .value=${this.#valueOf(props.name)}
+          .values=${this.#valuesOf(props.name)}
           ?required=${props.required}
-        >
-          <account-input
-            part="input"
-            id=${props.name}
-            name=${props.name}
-            type=${props.type}
-            .options=${props.options}
-            placeholder=${props.placeholder ?? ""}
-            .value=${this.#valueOf(props.name)}
-            .values=${this.#valuesOf(props.name)}
-            ?required=${props.required}
-            ?readonly=${props.readOnly}
-            ?disabled=${this.status === "saving"}
-          ></account-input>
-        </account-field>
+          ?readonly=${props.readOnly}
+          ?disabled=${this.status === "saving"}
+        ></account-input>
+      </account-field>
+    `;
+    // Prefer `attribute:<name>` so overrides never collide with title/actions/…
+    // Nested bare-name slot keeps older `slot="email"` overrides working.
+    return html`
+      <slot name=${attributeSlotName(props.name)}>
+        <slot name=${props.name}>${defaultField}</slot>
       </slot>
     `;
   }

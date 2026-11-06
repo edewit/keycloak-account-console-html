@@ -101,18 +101,22 @@ Authenticated reads/writes go through Account REST via `accountFetch` in `resour
 |------|---------|
 | `title` | Page heading |
 | `description` | Intro text |
-| `<attribute-name>` | Replace a profile field (e.g. `email`) |
+| `attribute:<name>` | Replace a profile field (e.g. `attribute:department`) |
+| `<attribute-name>` | Same as above (legacy; prefer the `attribute:` prefix) |
 | `field` | Append extra named fields (include a `name` to save) |
 | `actions` | Replace the save button row |
 
-Override a single profile field from HTML:
+Override a single profile field from HTML. Use `slot="attribute:<name>"` so the override cannot clash with reserved slots (`title`, `description`, `actions`, `field`). Control `name` may be bare (`department`) or `attributes.department`:
 
 ```html
 <account-shell>
   <account-personal-info>
-    <div slot="email" class="field">
-      <label for="email">Work email</label>
-      <input id="email" name="email" type="email" />
+    <div slot="attribute:department" class="field">
+      <label for="dept">Department</label>
+      <select name="attributes.department" id="dept">
+        <option value="engineering">Engineering</option>
+        <option value="product">Product</option>
+      </select>
     </div>
   </account-personal-info>
 </account-shell>
