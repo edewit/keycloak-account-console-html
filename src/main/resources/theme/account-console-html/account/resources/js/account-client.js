@@ -30,10 +30,15 @@ export function getKeycloak() {
         clientId: env.clientId,
       });
       const authenticated = await keycloak.init({
-        onLoad: "login-required",
+        onLoad: "check-sso",
         pkceMethod: "S256",
+        silentCheckSsoRedirectUri: new URL(
+          "silent-check-sso.html",
+          env.baseUrl,
+        ).href,
       });
       if (!authenticated) {
+        await keycloak.login();
         throw new Error("Not authenticated");
       }
       return keycloak;
