@@ -41,6 +41,9 @@ export function getKeycloak() {
         await keycloak.login();
         throw new Error("Not authenticated");
       }
+      // Re-fetch environment after SSO so feature flags reflect the signed-in user.
+      environmentPromise = undefined;
+      await getEnvironment();
       return keycloak;
     })();
   }

@@ -2,13 +2,14 @@
 
 Account console theme where **every page is a simple HTML file**. Pages are served by a custom `AccountResourceProvider`; browser JavaScript calls the Account REST API (no React, no Qute).
 
-Requires **Keycloak 26.x**.
+Requires **Keycloak 26.8+**.
 
 ## What’s included
 
 - Theme `account-console-html` (`account` type)
 - Provider id `html-account` — serves `pages/*.html` from the theme; injects `<base href>` from `baseUrl`
-- `GET …/account/environment.json` — bootstrap for keycloak-js / REST
+- `GET …/account/environment.json` — bootstrap for keycloak-js / REST (includes `features` flags)
+- Sidebar hides pages gated by feature flags / roles (same keys as Keycloak `content.json`)
 - Theme messages via `GET /resources/{realm}/account/{locale}` (parent `keycloak.v3`)
 - Shared design tokens (`resources/css/tokens.css`)
 - Lit web components under `resources/js/`

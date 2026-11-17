@@ -1,4 +1,5 @@
 import { LitElement, html, css, nothing } from "lit";
+import { getEnvironment, getKeycloak } from "./account-client.js";
 import { consumeMessages } from "./i18n.js";
 
 /**
@@ -6,11 +7,15 @@ import { consumeMessages } from "./i18n.js";
  *   label?: string,
  *   labelKey?: string,
  *   href?: string,
+ *   isVisible?: string,
  *   children?: NavLink[],
  * }} NavLink
  */
 
-/** Default account console menu (mirrors Keycloak content.json / message keys). */
+/**
+ * Default account console menu (mirrors Keycloak content.json / message keys).
+ * `isVisible` keys match `environment.features` from the stock account console.
+ */
 export const DEFAULT_LINKS = Object.freeze([
   { labelKey: "personalInfo", href: "./" },
   {
@@ -18,14 +23,38 @@ export const DEFAULT_LINKS = Object.freeze([
     children: [
       { labelKey: "signingIn", href: "signing-in.html" },
       { labelKey: "deviceActivity", href: "device-activity.html" },
-      { labelKey: "linkedAccounts", href: "linked-accounts.html" },
+      {
+        labelKey: "linkedAccounts",
+        href: "linked-accounts.html",
+        isVisible: "isLinkedAccountsEnabled",
+      },
     ],
   },
-  { labelKey: "applications", href: "applications.html" },
-  { labelKey: "groups", href: "groups.html" },
-  { labelKey: "organizations", href: "organizations.html" },
-  { labelKey: "resources", href: "resources.html" },
-  { labelKey: "verifiableCredentialsTitle", href: "verifiable-credentials.html" },
+  {
+    labelKey: "applications",
+    href: "applications.html",
+    isVisible: "isViewApplicationsEnabled",
+  },
+  {
+    labelKey: "groups",
+    href: "groups.html",
+    isVisible: "isViewGroupsEnabled",
+  },
+  {
+    labelKey: "organizations",
+    href: "organizations.html",
+    isVisible: "isViewOrganizationsEnabled",
+  },
+  {
+    labelKey: "resources",
+    href: "resources.html",
+    isVisible: "isMyResourcesEnabled",
+  },
+  {
+    labelKey: "verifiableCredentialsTitle",
+    href: "verifiable-credentials.html",
+    isVisible: "isOid4VciEnabled",
+  },
 ]);
 
 /**
@@ -41,6 +70,9 @@ export const DEFAULT_LINKS = Object.freeze([
  *     <a slot="link" href="help.html">Help</a>
  *   </account-sidebar>
  *
+ * Visibility — items with `isVisible` are shown only when that key is true in
+ * `environment.json` → `features` (same flags as Keycloak content.json).
+ *
  * Style — override CSS custom properties on the host, or target parts:
  *
  *   account-sidebar {
@@ -53,9 +85,18 @@ export class NavBar extends LitElement {
   static properties = {
     /** @type {NavLink[] | undefined} */
     links: { type: Array },
+    /** @type {Record<string, boolean>} */
+    features: { state: true },
+    featuresReady: { state: true },
   };
 
   #i18n = consumeMessages(this);
+
+  constructor() {
+    super();
+    this.features = {};
+    this.featuresReady = false;
+  }
 
   /** @returns {(key: string, params?: Record<string, string | number>) => string} */
   get #t() {
@@ -163,6 +204,25 @@ export class NavBar extends LitElement {
     }
   `;
 
+  connectedCallback() {
+    super.connectedCallback();
+    this.#loadFeatures();
+  }
+
+  async #loadFeatures() {
+    try {
+      // Wait for SSO so environment.features reflects the signed-in user.
+      await getKeycloak();
+      const env = await getEnvironment();
+      this.features = env.features ?? {};
+    } catch (error) {
+      console.warn("Failed to load account features for navigation", error);
+      this.features = {};
+    } finally {
+      this.featuresReady = true;
+    }
+  }
+
   /**
    * Replace or seed the link list, then append one entry.
    * @param {NavLink} link
@@ -174,6 +234,41 @@ export class NavBar extends LitElement {
   /** @returns {NavLink[]} */
   get resolvedLinks() {
     return this.links ?? DEFAULT_LINKS;
+  }
+
+  /**
+   * @param {NavLink} item
+   */
+  #isVisible(item) {
+    if (!item.isVisible) {
+      return true;
+    }
+    return Boolean(this.features?.[item.isVisible]);
+  }
+
+  /**
+   * @param {NavLink[]} items
+   * @returns {NavLink[]}
+   */
+  #visibleLinks(items) {
+    /** @type {NavLink[]} */
+    const visible = [];
+    for (const item of items) {
+      if (item.children?.length) {
+        if (!this.#isVisible(item)) {
+          continue;
+        }
+        const children = this.#visibleLinks(item.children);
+        if (children.length) {
+          visible.push({ ...item, children });
+        }
+        continue;
+      }
+      if (this.#isVisible(item)) {
+        visible.push(item);
+      }
+    }
+    return visible;
   }
 
   /**
@@ -240,7 +335,11 @@ export class NavBar extends LitElement {
   }
 
   render() {
-    return html`<nav part="nav">${this.#renderItems(this.resolvedLinks)}</nav>`;
+    if (!this.featuresReady) {
+      return html`<nav part="nav"></nav>`;
+    }
+    const links = this.#visibleLinks(this.resolvedLinks);
+    return html`<nav part="nav">${this.#renderItems(links)}</nav>`;
   }
 }
 

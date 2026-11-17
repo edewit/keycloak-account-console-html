@@ -189,6 +189,7 @@ public class HtmlAccountResourceProvider implements AccountResourceProvider {
                 + Constants.ACCOUNT_MANAGEMENT_CLIENT_ID + "/" + theme.getName());
         env.put("resourceVersion", Version.RESOURCES_VERSION);
         env.put("locale", locale.toLanguageTag());
+        env.put("features", AccountFeatures.resolve(session, realm, user));
         return env;
     }
 }
