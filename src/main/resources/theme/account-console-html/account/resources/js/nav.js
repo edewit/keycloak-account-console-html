@@ -12,7 +12,7 @@ import { consumeMessages } from "./i18n.js";
 
 /** Default account console menu (mirrors Keycloak content.json / message keys). */
 export const DEFAULT_LINKS = Object.freeze([
-  { labelKey: "personalInfo", href: "../account" },
+  { labelKey: "personalInfo", href: "./" },
   {
     labelKey: "accountSecurity",
     children: [
@@ -185,7 +185,7 @@ export class NavBar extends LitElement {
       return false;
     }
     const path = location.pathname.replace(/\/+$/, "");
-    if (href.startsWith("..")) {
+    if (href === "./" || href === "." || href === "") {
       return path.endsWith("account");
     }
     return path.endsWith("/" + href.replace(/^\.\//, ""));

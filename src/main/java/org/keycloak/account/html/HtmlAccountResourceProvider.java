@@ -140,12 +140,32 @@ public class HtmlAccountResourceProvider implements AccountResourceProvider {
             html = new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
 
+        // keycloak-js createAccountUrl uses `${realmUrl}/account?…` (no trailing slash). Relative
+        // resource/… and environment.json URLs need a document base under /account/.
+        html = withBaseHref(html, accountBaseUrl());
+
         UserModel user = auth != null ? auth.getUser() : null;
         Locale locale = session.getContext().resolveLocale(user);
         return noCache(Response.ok(html)
                 .type(org.keycloak.utils.MediaType.TEXT_HTML_UTF_8_TYPE)
                 .language(locale))
                 .build();
+    }
+
+    private static String withBaseHref(String html, String baseUrl) {
+        String withoutBase = html.replaceAll("(?is)<base\\b[^>]*>\\s*", "");
+        return withoutBase.replaceFirst("(?i)(<head\\b[^>]*>)",
+                "$1\n    <base href=\"" + baseUrl + "\" />");
+    }
+
+    private String accountBaseUrl() {
+        URI accountBaseUrl = session.getContext().getUri(UrlType.FRONTEND).getBaseUriBuilder()
+                .path(RealmsResource.class)
+                .path(realm.getName())
+                .path(Constants.ACCOUNT_MANAGEMENT_CLIENT_ID)
+                .path("/")
+                .build(realm);
+        return accountBaseUrl.getPath().endsWith("/") ? accountBaseUrl.toString() : accountBaseUrl + "/";
     }
 
     private static Response.ResponseBuilder noCache(Response.ResponseBuilder builder) {
@@ -157,13 +177,6 @@ public class HtmlAccountResourceProvider implements AccountResourceProvider {
         var serverBaseUri = serverUriInfo.getBaseUri();
         String serverBaseUrl = serverBaseUri.toString().replaceFirst("/+$", "");
 
-        URI accountBaseUrl = serverUriInfo.getBaseUriBuilder()
-                .path(RealmsResource.class)
-                .path(realm.getName())
-                .path(Constants.ACCOUNT_MANAGEMENT_CLIENT_ID)
-                .path("/")
-                .build(realm);
-
         UserModel user = auth != null ? auth.getUser() : null;
         Locale locale = session.getContext().resolveLocale(user);
 
@@ -171,7 +184,7 @@ public class HtmlAccountResourceProvider implements AccountResourceProvider {
         env.put("serverBaseUrl", serverBaseUrl);
         env.put("realm", realm.getName());
         env.put("clientId", Constants.ACCOUNT_CONSOLE_CLIENT_ID);
-        env.put("baseUrl", accountBaseUrl.getPath().endsWith("/") ? accountBaseUrl.toString() : accountBaseUrl + "/");
+        env.put("baseUrl", accountBaseUrl());
         env.put("resourceUrl", Urls.themeRoot(serverBaseUri).getPath() + "/"
                 + Constants.ACCOUNT_MANAGEMENT_CLIENT_ID + "/" + theme.getName());
         env.put("resourceVersion", Version.RESOURCES_VERSION);

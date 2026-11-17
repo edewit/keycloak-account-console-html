@@ -7,7 +7,7 @@ Requires **Keycloak 26.x**.
 ## What’s included
 
 - Theme `account-console-html` (`account` type)
-- Provider id `html-account` — serves `pages/*.html` from the theme
+- Provider id `html-account` — serves `pages/*.html` from the theme; injects `<base href>` from `baseUrl`
 - `GET …/account/environment.json` — bootstrap for keycloak-js / REST
 - Theme messages via `GET /resources/{realm}/account/{locale}` (parent `keycloak.v3`)
 - Shared design tokens (`resources/css/tokens.css`)
@@ -64,7 +64,6 @@ In the Admin Console, set the realm **Account theme** to `account-console-html`.
 <!doctype html>
 <html lang="en">
   <head>
-    <base href="account/" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>My page</title>
