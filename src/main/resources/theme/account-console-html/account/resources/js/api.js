@@ -41,3 +41,28 @@ export async function getCredentials() {
   }
   return response.json();
 }
+
+/**
+ * Devices / sessions for the signed-in user (Account REST `/sessions/devices`).
+ * @returns {Promise<any[]>}
+ */
+export async function getDevices() {
+  const response = await accountFetch("/sessions/devices");
+  if (!response.ok) {
+    throw new Error(`Failed to load devices (${response.status})`);
+  }
+  return response.json();
+}
+
+/**
+ * Delete one session, or all sessions when `id` is omitted (Account REST `/sessions`).
+ * @param {string} [id]
+ */
+export async function deleteSession(id) {
+  const path = id ? `/sessions/${encodeURIComponent(id)}` : "/sessions";
+  const response = await accountFetch(path, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error(`Failed to sign out session (${response.status})`);
+  }
+  return response;
+}

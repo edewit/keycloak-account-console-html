@@ -16,6 +16,7 @@ Requires **Keycloak 26.x**.
   - `account-sidebar` — navigation
   - `account-personal-info` — profile form (user-profile metadata driven)
   - `account-signing-in` — credential types (password, OTP, passkeys, …)
+  - `account-device-activity` — signed-in devices / sessions
   - `account-field`, `account-input`, `account-save-button` — form primitives
 
 ## Local development (live HTML)
@@ -177,6 +178,29 @@ Loads `/credentials` and groups types by category (basic / two-factor / password
 </account-shell>
 ```
 
+### Device activity (`account-device-activity`)
+
+Loads `/sessions/devices` (current device/session first). Refresh reloads the list; sign out calls `DELETE /sessions/{id}` (or all sessions, then keycloak-js logout).
+
+| Slot | Purpose |
+|------|---------|
+| `title` | Page heading |
+| `description` | Intro text |
+| `actions` | Toolbar (refresh / sign out all) |
+
+| Event | When | Notes |
+|-------|------|--------|
+| `load` | Devices loaded | `detail` is the device list |
+| `sign-out` | Before sign-out | Cancelable; `detail` is `{ kind: "session"|"all", … }` |
+| `signed-out` | After a successful sign-out | Same `detail` shape |
+| `error` | Load or sign-out failure | `detail` is `{ phase, error, message }` |
+
+```html
+<account-shell>
+  <account-device-activity></account-device-activity>
+</account-shell>
+```
+
 ```html
 <script type="module">
   const form = document.querySelector("account-personal-info");
@@ -196,6 +220,7 @@ Components also expose `::part(...)` hooks, for example:
 - `account-shell::part(layout|nav|main)`
 - `account-personal-info::part(form|field|actions|message)`
 - `account-signing-in::part(title|description|category|type|list|item|actions|message|empty)`
+- `account-device-activity::part(title|description|toolbar|list|item|details|actions|message|empty|badge)`
 - `account-input::part(input)`
 - `account-save-button::part(button)`
 
