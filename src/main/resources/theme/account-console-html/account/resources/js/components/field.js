@@ -22,18 +22,25 @@ export class AccountField extends LitElement {
     :host {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
+      gap: 0.5rem;
+      width: 100%;
     }
 
     label {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
+      gap: 0.5rem;
+    }
+
+    [part="control"] {
+      display: block;
+      width: 100%;
     }
 
     .caption {
       color: var(--account-label-color, currentColor);
-      font-size: 0.9rem;
+      font-size: 0.95rem;
+      font-weight: 500;
     }
 
     .help {

@@ -28,10 +28,6 @@ export class AccountInput extends LitElement {
 
   static styles = css`
     :host {
-      --account-input-border: var(--account-border-color, currentColor);
-      --account-input-radius: var(--account-radius, 0.35rem);
-      --account-input-padding: 0.45rem 0.6rem;
-
       display: block;
     }
 
@@ -40,17 +36,21 @@ export class AccountInput extends LitElement {
     textarea {
       display: block;
       width: 100%;
+      max-width: 100%;
       box-sizing: border-box;
-      font: inherit;
-      padding: var(--account-input-padding);
-      border: 1px solid var(--account-input-border);
-      border-radius: var(--account-input-radius);
+      font-family: inherit;
+      font-size: var(--account-input-font-size, 1rem);
+      line-height: 1.5;
+      min-height: 3rem;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--account-border-color, currentColor);
+      border-radius: var(--account-radius, 0.5rem);
       background: transparent;
       color: inherit;
     }
 
     textarea {
-      min-height: 5rem;
+      min-height: 7rem;
       resize: vertical;
     }
 
@@ -75,10 +75,6 @@ export class AccountInput extends LitElement {
     this.disabled = false;
     this.readOnly = false;
     this.placeholder = "";
-  }
-
-  createRenderRoot() {
-    return this.attachShadow({ mode: "open", delegatesFocus: true });
   }
 
   /** @returns {string[]} */
@@ -168,9 +164,11 @@ export class AccountInput extends LitElement {
           ?multiple=${multiple}
           @change=${this.#onInput}
         >
-          ${!this.required && !multiple
-            ? html`<option value=""></option>`
-            : nothing}
+          ${
+            !this.required && !multiple
+              ? html`<option value=""></option>`
+              : nothing
+          }
           ${options.map(
             (option) => html`
               <option value=${option} ?selected=${values.has(option)}>

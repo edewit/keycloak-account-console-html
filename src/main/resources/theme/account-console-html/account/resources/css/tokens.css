@@ -6,15 +6,17 @@
   color-scheme: light dark;
 
   --account-font: system-ui, sans-serif;
-  --account-gap: 1rem;
-  --account-radius: 0.35rem;
-  --account-max-width: 28rem;
+  --account-gap: 1.5rem;
+  --account-radius: 0.5rem;
+  --account-max-width: 42rem;
 
   --account-label-color: color-mix(in srgb, currentColor 70%, transparent);
   --account-muted-color: color-mix(in srgb, currentColor 55%, transparent);
   --account-border-color: color-mix(in srgb, currentColor 25%, transparent);
 
-  --account-input-padding: 0.45rem 0.6rem;
+  --account-input-font-size: 1rem;
+  --account-input-padding: 0.85rem 1rem;
+  --account-input-min-height: 3rem;
   --account-button-padding: 0.5rem 1rem;
   --account-button-bg: light-dark(#1b1b1b, #f0f0f0);
   --account-button-fg: light-dark(#fff, #1b1b1b);

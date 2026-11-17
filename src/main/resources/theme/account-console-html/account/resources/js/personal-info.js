@@ -52,13 +52,14 @@ export class PersonalInfo extends LitElement {
 
   static styles = css`
     :host {
-      --account-personal-gap: var(--account-gap, 1rem);
+      --account-personal-gap: var(--account-gap, 1.5rem);
       --account-personal-label-color: var(--account-label-color, currentColor);
-      --account-personal-max-width: var(--account-max-width, 28rem);
+      --account-personal-max-width: var(--account-max-width, 42rem);
       --account-personal-error-color: var(--account-error-color, #b42318);
       --account-personal-success-color: var(--account-success-color, #027a48);
 
       display: block;
+      width: 100%;
       max-width: var(--account-personal-max-width);
     }
 
@@ -76,6 +77,7 @@ export class PersonalInfo extends LitElement {
       display: flex;
       flex-direction: column;
       gap: var(--account-personal-gap);
+      width: 100%;
     }
 
     .field,
@@ -84,7 +86,12 @@ export class PersonalInfo extends LitElement {
     ::slotted([slot^="attribute:"]) {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
+      gap: 0.5rem;
+    }
+
+    account-field,
+    account-input {
+      width: 100%;
     }
 
     .actions {
