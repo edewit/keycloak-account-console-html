@@ -66,3 +66,45 @@ export async function deleteSession(id) {
   }
   return response;
 }
+
+/**
+ * Applications the signed-in user can access (Account REST `/applications`).
+ * @returns {Promise<any[]>}
+ */
+export async function getApplications() {
+  const response = await accountFetch("/applications");
+  if (!response.ok) {
+    throw new Error(`Failed to load applications (${response.status})`);
+  }
+  return response.json();
+}
+
+/**
+ * Remove granted consent for an application.
+ * @param {string} clientId
+ */
+export async function deleteConsent(clientId) {
+  const response = await accountFetch(
+    `/applications/${encodeURIComponent(clientId)}/consent`,
+    { method: "DELETE" },
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to remove consent (${response.status})`);
+  }
+  return response;
+}
+
+/**
+ * End all sessions (including offline) for an application.
+ * @param {string} clientId
+ */
+export async function deleteApplicationSessions(clientId) {
+  const response = await accountFetch(
+    `/applications/${encodeURIComponent(clientId)}/sessions`,
+    { method: "DELETE" },
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to end application sessions (${response.status})`);
+  }
+  return response;
+}

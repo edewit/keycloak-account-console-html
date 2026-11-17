@@ -18,6 +18,7 @@ Requires **Keycloak 26.8+**.
   - `account-personal-info` — profile form (user-profile metadata driven)
   - `account-signing-in` — credential types (password, OTP, passkeys, …)
   - `account-device-activity` — signed-in devices / sessions
+  - `account-applications` — applications with consent / session controls
   - `account-field`, `account-input`, `account-save-button` — form primitives
 
 ## Local development (live HTML)
@@ -202,6 +203,28 @@ Loads `/sessions/devices` (current device/session first). Refresh reloads the li
 </account-shell>
 ```
 
+### Applications (`account-applications`)
+
+Loads `/applications` (sorted by name). Expand a row for client details / scopes; end sessions via `DELETE /applications/{id}/sessions`, remove consent via `DELETE /applications/{id}/consent`.
+
+| Slot | Purpose |
+|------|---------|
+| `title` | Page heading |
+| `description` | Intro text |
+
+| Event | When | Notes |
+|-------|------|--------|
+| `load` | Applications loaded | `detail` is the client list |
+| `end-session` / `remove-consent` | Before the action | Cancelable; `detail` is `{ application }` |
+| `removed` | After success | `detail` is `{ kind: "session"|"consent", application }` |
+| `error` | Load or action failure | `detail` is `{ phase, error, message }` |
+
+```html
+<account-shell>
+  <account-applications></account-applications>
+</account-shell>
+```
+
 ```html
 <script type="module">
   const form = document.querySelector("account-personal-info");
@@ -222,6 +245,7 @@ Components also expose `::part(...)` hooks, for example:
 - `account-personal-info::part(form|field|actions|message)`
 - `account-signing-in::part(title|description|category|type|list|item|actions|message|empty)`
 - `account-device-activity::part(title|description|toolbar|list|item|details|actions|message|empty|badge)`
+- `account-applications::part(title|description|list|item|details|actions|message|empty)`
 - `account-input::part(input)`
 - `account-save-button::part(button)`
 
