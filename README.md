@@ -19,6 +19,7 @@ Requires **Keycloak 26.8+**.
   - `account-signing-in` — credential types (password, OTP, passkeys, …)
   - `account-device-activity` — signed-in devices / sessions
   - `account-applications` — applications with consent / session controls
+  - `account-groups` — group memberships (optional direct-only filter)
   - `account-field`, `account-input`, `account-save-button` — form primitives
 
 ## Local development (live HTML)
@@ -225,6 +226,27 @@ Loads `/applications` (sorted by name). Expand a row for client details / scopes
 </account-shell>
 ```
 
+### Groups (`account-groups`)
+
+Loads `/groups`. By default ancestor path groups are included; enable **Direct membership** to show only API groups.
+
+| Slot | Purpose |
+|------|---------|
+| `title` | Page heading |
+| `description` | Intro text |
+| `toolbar` | Direct-membership filter |
+
+| Event | When | Notes |
+|-------|------|--------|
+| `load` | Groups loaded | `detail` is the (possibly expanded) group list |
+| `error` | Load failure | `detail` is `{ phase, error, message }` |
+
+```html
+<account-shell>
+  <account-groups></account-groups>
+</account-shell>
+```
+
 ```html
 <script type="module">
   const form = document.querySelector("account-personal-info");
@@ -246,6 +268,7 @@ Components also expose `::part(...)` hooks, for example:
 - `account-signing-in::part(title|description|category|type|list|item|actions|message|empty)`
 - `account-device-activity::part(title|description|toolbar|list|item|details|actions|message|empty|badge)`
 - `account-applications::part(title|description|list|item|details|actions|message|empty)`
+- `account-groups::part(title|description|toolbar|list|item|message|empty)`
 - `account-input::part(input)`
 - `account-save-button::part(button)`
 

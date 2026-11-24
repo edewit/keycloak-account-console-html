@@ -108,3 +108,15 @@ export async function deleteApplicationSessions(clientId) {
   }
   return response;
 }
+
+/**
+ * Groups the signed-in user belongs to (Account REST `/groups`).
+ * @returns {Promise<any[]>}
+ */
+export async function getGroups() {
+  const response = await accountFetch("/groups");
+  if (!response.ok) {
+    throw new Error(`Failed to load groups (${response.status})`);
+  }
+  return response.json();
+}
