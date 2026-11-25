@@ -8,6 +8,7 @@ import {
 import { consumeMessages } from "./i18n.js";
 import {
   emitEvent,
+  label,
   pageChromeStyles,
   renderLoadError,
   renderLoading,
@@ -23,22 +24,6 @@ function formatDate(epochMs, locale) {
     dateStyle: "long",
     timeStyle: "short",
   });
-}
-
-/**
- * Resolve Keycloak message keys wrapped as `${key}` (client display names).
- * @param {(key: string, params?: Record<string, string | number>) => string} t
- * @param {string | undefined} name
- */
-function label(t, name) {
-  if (!name) {
-    return "";
-  }
-  if (name.startsWith("${") && name.endsWith("}")) {
-    return t(name.slice(2, -1)) || name.slice(2, -1);
-  }
-  const translated = t(name);
-  return translated !== name ? translated : name;
 }
 
 /**

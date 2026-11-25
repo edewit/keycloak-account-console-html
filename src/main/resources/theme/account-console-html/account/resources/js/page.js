@@ -5,9 +5,29 @@ import { html, css, nothing } from "lit";
  */
 
 /**
+ * Resolve Keycloak message keys wrapped as `${key}` (client / IdP display names).
+ *
+ * @param {(key: string, params?: Record<string, string | number>) => string} t
+ * @param {string | undefined} name
+ * @returns {string}
+ */
+export function label(t, name) {
+  if (!name) {
+    return "";
+  }
+  if (name.startsWith("${") && name.endsWith("}")) {
+    const key = name.slice(2, -1);
+    const translated = t(key);
+    return translated !== key ? translated : key;
+  }
+  const translated = t(name);
+  return translated !== name ? translated : name;
+}
+
+/**
  * Events dispatched by account page components via {@link emitEvent}.
  *
- * @typedef {"load" | "error" | "save" | "saved" | "action" | "sign-out" | "signed-out" | "end-session" | "remove-consent" | "removed"} AccountPageEventType
+ * @typedef {"load" | "error" | "save" | "saved" | "action" | "sign-out" | "signed-out" | "end-session" | "remove-consent" | "removed" | "link" | "unlink" | "unlinked"} AccountPageEventType
  */
 
 /**

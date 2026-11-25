@@ -3,6 +3,7 @@ import { deleteSession, getDevices, getKeycloak } from "./api.js";
 import { consumeMessages } from "./i18n.js";
 import {
   emitEvent,
+  label,
   pageChromeStyles,
   renderLoadError,
   renderLoading,
@@ -18,21 +19,6 @@ function formatDate(epochSeconds, locale) {
     dateStyle: "long",
     timeStyle: "short",
   });
-}
-
-/**
- * Resolve Keycloak message keys wrapped as `${key}` (client display names).
- * @param {(key: string) => string} t
- * @param {string | undefined} name
- */
-function label(t, name) {
-  if (!name) {
-    return "";
-  }
-  if (name.startsWith("${") && name.endsWith("}")) {
-    return t(name.slice(2, -1)) || name.slice(2, -1);
-  }
-  return t(name) || name;
 }
 
 /**

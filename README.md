@@ -21,6 +21,7 @@ Requires **Keycloak 26.8+**.
   - `account-device-activity` — signed-in devices / sessions
   - `account-applications` — applications with consent / session controls
   - `account-groups` — group memberships (optional direct-only filter)
+  - `account-linked-accounts` — federated IdP link / unlink
   - `account-field`, `account-input`, `account-save-button` — form primitives
 
 ## Local development (live HTML)
@@ -259,6 +260,28 @@ Loads `/groups`. By default ancestor path groups are included; enable **Direct m
 </account-shell>
 ```
 
+### Linked accounts (`account-linked-accounts`)
+
+Loads `/linked-accounts?linked=true|false`. **Link** runs `keycloak.login({ action: "idp_link:<alias>" })`; **Unlink** calls `DELETE /linked-accounts/{providerName}`.
+
+| Slot | Purpose |
+|------|---------|
+| `title` | Page heading |
+| `description` | Intro text |
+
+| Event | When | Notes |
+|-------|------|--------|
+| `load` | Lists loaded | `detail` is `{ linked, available }` |
+| `link` / `unlink` | Before the action | Cancelable; `detail` is `{ account, providerAlias }` |
+| `unlinked` | After successful unlink | Same `detail` shape |
+| `error` | Load or action failure | `detail` is `{ phase, error, message }` |
+
+```html
+<account-shell>
+  <account-linked-accounts></account-linked-accounts>
+</account-shell>
+```
+
 ```html
 <script type="module">
   const form = document.querySelector("account-personal-info");
@@ -281,6 +304,7 @@ Components also expose `::part(...)` hooks, for example:
 - `account-device-activity::part(title|description|toolbar|list|item|details|actions|message|empty|badge)`
 - `account-applications::part(title|description|list|item|details|actions|message|empty)`
 - `account-groups::part(title|description|toolbar|list|item|message|empty)`
+- `account-linked-accounts::part(title|description|section|list|item|actions|message|empty|badge)`
 - `account-input::part(input)`
 - `account-save-button::part(button)`
 

@@ -120,3 +120,42 @@ export async function getGroups() {
   }
   return response.json();
 }
+
+/**
+ * Identity providers linked to the user, or available to link
+ * (Account REST `/linked-accounts`).
+ *
+ * @param {{ linked?: boolean, search?: string, first?: number, max?: number }} [query]
+ * @returns {Promise<any[]>}
+ */
+export async function getLinkedAccounts(query = {}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  }
+  const qs = params.toString();
+  const response = await accountFetch(
+    `/linked-accounts${qs ? `?${qs}` : ""}`,
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to load linked accounts (${response.status})`);
+  }
+  return response.json();
+}
+
+/**
+ * Unlink an identity provider from the signed-in user.
+ * @param {string} providerAlias
+ */
+export async function unlinkAccount(providerAlias) {
+  const response = await accountFetch(
+    `/linked-accounts/${encodeURIComponent(providerAlias)}`,
+    { method: "DELETE" },
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to unlink account (${response.status})`);
+  }
+  return response;
+}
