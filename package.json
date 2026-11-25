@@ -6,13 +6,20 @@
   "type": "module",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "mvn -q package -DskipTests",
+    "vendor": "node scripts/vendor.mjs",
+    "build": "node scripts/vendor.mjs && mvn -q package -DskipTests",
     "start-keycloak": "node scripts/start-keycloak.mjs"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "keycloak-runner": "0.0.1-alpha.3"
+    "@lit/context": "1.1.6",
+    "keycloak-js": "26.2.5",
+    "keycloak-runner": "0.0.1-alpha.3",
+    "lit": "3.3.3"
+  },
+  "devDependencies": {
+    "ws": "^8.23.0"
   }
 }

@@ -20,6 +20,7 @@ import jakarta.ws.rs.core.UriBuilder;
 
 import org.jboss.logging.Logger;
 import org.keycloak.common.Version;
+import org.keycloak.common.util.MimeTypeUtil;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.Constants;
 import org.keycloak.models.KeycloakSession;
@@ -31,7 +32,6 @@ import org.keycloak.services.managers.Auth;
 import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.resource.AccountResourceProvider;
 import org.keycloak.services.resources.RealmsResource;
-import org.keycloak.services.resources.ThemeResource;
 import org.keycloak.theme.Theme;
 import org.keycloak.urls.UrlType;
 import org.keycloak.util.JsonSerialization;
@@ -82,37 +82,54 @@ public class HtmlAccountResourceProvider implements AccountResourceProvider {
                 .build();
     }
 
+    /**
+     * keycloak-js often lands on {@code /account} without a trailing slash; relative
+     * {@code resource/…} URLs then resolve under the realm path. Redirect to {@code /account/}.
+     */
     @GET
     @Produces(MediaType.TEXT_HTML)
     public Response getIndex() throws IOException {
+        Response redirect = redirectIfAccountPathMissingSlash();
+        if (redirect != null) {
+            return redirect;
+        }
         return servePage("index");
     }
 
+    /**
+     * Serve theme resources under {@code /account/resource/…} directly (no ThemeResource
+     * redirect). Keeps module and CSS URLs same-origin under {@code /account/}.
+     */
     @GET
     @Path("resource/{path:.*}")
-    public Response getResource(@PathParam("path") String path) {
+    public Response getResource(@PathParam("path") String path) throws IOException {
         if (path == null || path.isBlank() || path.contains("..") || path.startsWith("/") || path.contains("\\")) {
             throw new NotFoundException();
         }
 
-        URI location = UriBuilder.fromUri(session.getContext().getUri(UrlType.FRONTEND).getBaseUri())
-                .path(ThemeResource.class)
-                .path("/{version}/{themeType}/{themeName}/{path}")
-                .build(new Object[] {
-                        Version.RESOURCES_VERSION,
-                        Theme.Type.ACCOUNT.toString().toLowerCase(),
-                        theme.getName(),
-                        path
-                }, false);
+        InputStream stream = theme.getResourceAsStream(path);
+        if (stream == null) {
+            throw new NotFoundException();
+        }
 
-        return Response.temporaryRedirect(location).build();
+        String contentType = MimeTypeUtil.getContentType(path);
+        if (contentType == null || contentType.isBlank()) {
+            contentType = "application/octet-stream";
+        }
+
+        return noCache(Response.ok(stream).type(contentType)).build();
     }
 
     @GET
     @Produces(MediaType.TEXT_HTML)
     @Path("{path:.*}")
     public Response getPage(@PathParam("path") String path) throws IOException {
+        // Empty path can match here instead of getIndex depending on the runtime.
         if (path == null || path.isBlank() || "index.html".equals(path)) {
+            Response redirect = redirectIfAccountPathMissingSlash();
+            if (redirect != null) {
+                return redirect;
+            }
             return servePage("index");
         }
 
@@ -125,6 +142,26 @@ public class HtmlAccountResourceProvider implements AccountResourceProvider {
         }
 
         return servePage(segment);
+    }
+
+    /**
+     * @return a redirect response when the browser path is {@code …/account} (no trailing slash),
+     *         otherwise {@code null}
+     */
+    private Response redirectIfAccountPathMissingSlash() {
+        URI requestUri = session.getContext().getUri().getRequestUri();
+        String path = requestUri.getPath() == null ? "" : requestUri.getPath();
+        if (session.getContext().getHttpRequest() != null) {
+            String raw = session.getContext().getHttpRequest().getUri().getRequestUri().getPath();
+            if (raw != null && !raw.isBlank()) {
+                path = raw;
+            }
+        }
+        if (path.endsWith("/")) {
+            return null;
+        }
+        URI location = UriBuilder.fromUri(requestUri).replacePath(path + "/").build();
+        return Response.seeOther(location).build();
     }
 
     private Response servePage(String pageId) throws IOException {
@@ -140,22 +177,12 @@ public class HtmlAccountResourceProvider implements AccountResourceProvider {
             html = new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
 
-        // keycloak-js createAccountUrl uses `${realmUrl}/account?…` (no trailing slash). Relative
-        // resource/… and environment.json URLs need a document base under /account/.
-        html = withBaseHref(html, accountBaseUrl());
-
         UserModel user = auth != null ? auth.getUser() : null;
         Locale locale = session.getContext().resolveLocale(user);
         return noCache(Response.ok(html)
                 .type(org.keycloak.utils.MediaType.TEXT_HTML_UTF_8_TYPE)
                 .language(locale))
                 .build();
-    }
-
-    private static String withBaseHref(String html, String baseUrl) {
-        String withoutBase = html.replaceAll("(?is)<base\\b[^>]*>\\s*", "");
-        return withoutBase.replaceFirst("(?i)(<head\\b[^>]*>)",
-                "$1\n    <base href=\"" + baseUrl + "\" />");
     }
 
     private String accountBaseUrl() {

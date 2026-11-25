@@ -7,11 +7,12 @@ Requires **Keycloak 26.8+**.
 ## What’s included
 
 - Theme `account-console-html` (`account` type)
-- Provider id `html-account` — serves `pages/*.html` from the theme; injects `<base href>` from `baseUrl`
+- Provider id `html-account` — serves `pages/*.html` as-is; redirects bare `/account` → `/account/` so relative URLs resolve
 - `GET …/account/environment.json` — bootstrap for keycloak-js / REST (includes `features` flags)
 - Sidebar hides pages gated by feature flags / roles (same keys as Keycloak `content.json`)
 - Theme messages via `GET /resources/{realm}/account/{locale}` (parent `keycloak.v3`)
 - Shared design tokens (`resources/css/tokens.css`)
+- Lit / `@lit/context` / `keycloak-js` vendored under `resources/js/vendor/` (no CDN) — works air-gapped; no third-party script hosts
 - Lit web components under `resources/js/`
   - `account-shell` — page chrome; loads messages and provides Lit context
   - `account-sidebar` — navigation
@@ -48,9 +49,26 @@ npm run build
 npm run start-keycloak
 ```
 
+## Vendored JS (Lit / keycloak-js)
+
+Runtime modules live under `resources/js/vendor/` and are declared in `resources/js/importmap.json`. Pages load classic [`boot.js`](src/main/resources/theme/account-console-html/account/resources/js/boot.js), which injects an import map then `import()`s the modules in `data-modules`.
+
+If `vendor/` is missing, `boot.js` falls back to a jsDelivr CDN import map (fine for local experiments; not for air-gapped / strict CSP).
+
+```bash
+npm run vendor   # refresh vendor/ + importmap.json from package.json pins
+npm run build    # vendor + mvn package
+```
+
+Bump versions in `package.json`, run `npm install` / `pnpm install`, then `npm run vendor`. Commit the updated `vendor/` tree and `importmap.json` so production stays offline-friendly.
+
+**CSP:** with vendored modules there are no third-party hosts. `boot.js` still injects an inline import map, so a strict `script-src 'self'` without `'unsafe-inline'` (or a hash/nonce) will block that step — same constraint as much of Keycloak’s own UI. The CDN fallback needs network egress to `cdn.jsdelivr.net`.
+
 ## Production build & deploy
 
 ```bash
+npm run build
+# or, if vendor/ is already up to date:
 mvn clean package
 cp target/keycloak-account-console-html-*.jar $KEYCLOAK_HOME/providers/
 $KEYCLOAK_HOME/bin/kc.sh build
@@ -61,7 +79,7 @@ In the Admin Console, set the realm **Account theme** to `account-console-html`.
 ## Adding a page
 
 1. Add `src/main/resources/theme/account-console-html/account/pages/<name>.html`
-2. Load tokens, the importmap, `components/shell.js`, and any page scripts
+2. Load tokens and `boot.js` with `data-modules` (trailing-slash redirect keeps relative URLs correct)
 3. Compose with `<account-shell>`:
 
 ```html
@@ -72,16 +90,10 @@ In the Admin Console, set the realm **Account theme** to `account-console-html`.
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>My page</title>
     <link rel="stylesheet" href="resource/css/tokens.css" />
-    <script type="importmap">
-      {
-        "imports": {
-          "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm",
-          "@lit/context": "https://cdn.jsdelivr.net/npm/@lit/context/+esm",
-          "keycloak-js": "https://cdn.jsdelivr.net/npm/keycloak-js/+esm"
-        }
-      }
-    </script>
-    <script src="resource/js/components/shell.js" type="module"></script>
+    <script
+      src="resource/js/boot.js"
+      data-modules="components/shell.js"
+    ></script>
   </head>
   <body>
     <account-shell>

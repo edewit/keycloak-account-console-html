@@ -10,3 +10,4 @@ node_modules/
 /.factorypath
 /.settings
 /.vscode
+vendor/

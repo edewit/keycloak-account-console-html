@@ -5,17 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Groups</title>
     <link rel="stylesheet" href="resource/css/tokens.css" />
-    <script type="importmap">
-      {
-        "imports": {
-          "lit": "https://cdn.jsdelivr.net/npm/lit@3/+esm",
-          "@lit/context": "https://cdn.jsdelivr.net/npm/@lit/context/+esm",
-          "keycloak-js": "https://cdn.jsdelivr.net/npm/keycloak-js/+esm"
-        }
-      }
-    </script>
-    <script src="resource/js/components/shell.js" type="module"></script>
-    <script src="resource/js/groups.js" type="module"></script>
+    <script
+      src="resource/js/boot.js"
+      data-modules="components/shell.js,groups.js"
+    ></script>
   </head>
   <body>
     <account-shell>

@@ -91,6 +91,19 @@ if (!fs.existsSync(THEME_DIR)) {
   throw new Error(`Theme directory not found: ${THEME_DIR}`);
 }
 
+function warnIfVendorMissing() {
+  const vendorLit = path.join(THEME_DIR, "account/resources/js/vendor/lit/index.js");
+  if (fs.existsSync(vendorLit)) {
+    return;
+  }
+  console.warn(
+    "Vendored JS missing (resource/js/vendor/). boot.js will use the CDN import map.",
+  );
+  console.warn("For offline / strict CSP, run: npm run vendor");
+  console.warn("");
+}
+
+warnIfVendorMissing();
 const providerJar = ensureProviderJar();
 const keycloakUrl = process.env.KEYCLOAK_URL ?? "http://127.0.0.1:8080";
 const args = [
