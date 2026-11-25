@@ -1,6 +1,13 @@
-import { LitElement, html, css, nothing } from "lit";
+import { LitElement, html, css } from "lit";
 import { getGroups } from "./api.js";
 import { consumeMessages } from "./i18n.js";
+import {
+  emitEvent,
+  pageChromeStyles,
+  renderLoadError,
+  renderLoading,
+  renderMessage,
+} from "./page.js";
 
 /**
  * Add ancestor path groups that are not already in the list (mirrors account-ui).
@@ -46,29 +53,20 @@ export class Groups extends LitElement {
     message: { state: true },
   };
 
-  static styles = css`
+  static styles = [
+    pageChromeStyles,
+    css`
     :host {
-      --account-groups-gap: var(--account-gap, 1.25rem);
+      --account-gap: 1.25rem;
+      --account-message-margin: var(--account-gap);
       --account-groups-max-width: var(--account-max-width, 42rem);
-      --account-groups-label-color: var(--account-label-color, currentColor);
       --account-groups-muted-color: var(--account-muted-color, currentColor);
       --account-groups-border: var(--account-border-color, currentColor);
       --account-groups-radius: var(--account-radius, 0.5rem);
-      --account-groups-error-color: var(--account-error-color, #b42318);
 
       display: block;
       width: 100%;
       max-width: var(--account-groups-max-width);
-    }
-
-    h1 {
-      margin: 0 0 0.35rem;
-      font-size: 1.5rem;
-    }
-
-    .description {
-      margin: 0 0 var(--account-groups-gap);
-      color: var(--account-groups-label-color);
     }
 
     .toolbar {
@@ -76,7 +74,7 @@ export class Groups extends LitElement {
       flex-wrap: wrap;
       gap: 0.75rem;
       align-items: center;
-      margin: 0 0 var(--account-groups-gap);
+      margin: 0 0 var(--account-gap);
     }
 
     .filter {
@@ -151,15 +149,6 @@ export class Groups extends LitElement {
       color: var(--account-groups-muted-color);
     }
 
-    .message {
-      margin: var(--account-groups-gap) 0 0;
-      font-size: 0.9rem;
-    }
-
-    .message[data-tone="error"] {
-      color: var(--account-groups-error-color);
-    }
-
     @media (max-width: 36rem) {
       .header {
         display: none;
@@ -174,7 +163,8 @@ export class Groups extends LitElement {
         justify-self: start;
       }
     }
-  `;
+  `,
+  ];
 
   #i18n = consumeMessages(this);
 
@@ -195,20 +185,6 @@ export class Groups extends LitElement {
     this.#load();
   }
 
-  /**
-   * @param {string} type
-   * @param {unknown} [detail]
-   */
-  #emit(type, detail) {
-    return this.dispatchEvent(
-      new CustomEvent(type, {
-        detail,
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }
-
   async #load() {
     this.status = "loading";
     try {
@@ -216,11 +192,11 @@ export class Groups extends LitElement {
       this.directGroups = groups;
       this.#applyFilter();
       this.status = "ready";
-      this.#emit("load", this.groups);
+      emitEvent(this, "load", this.groups);
     } catch (error) {
       this.status = "error";
       this.message = error instanceof Error ? error.message : String(error);
-      this.#emit("error", { phase: "load", error, message: this.message });
+      emitEvent(this, "error", { phase: "load", error, message: this.message });
     }
   }
 
@@ -267,13 +243,11 @@ export class Groups extends LitElement {
 
   render() {
     if (this.status === "loading" && !this.groups) {
-      return html`<p part="message" class="message">Loading groups…</p>`;
+      return renderLoading("Loading groups…");
     }
 
     if (this.status === "error" && !this.groups) {
-      return html`
-        <p part="message" class="message" data-tone="error">${this.message}</p>
-      `;
+      return renderLoadError(this.message);
     }
 
     const groups = this.groups ?? [];
@@ -311,11 +285,7 @@ export class Groups extends LitElement {
             </ul>
           `
         : html`<p class="empty" part="empty">${this.#t("groups")}</p>`}
-      ${this.message
-        ? html`<p part="message" class="message" data-tone="error">
-            ${this.message}
-          </p>`
-        : nothing}
+      ${renderMessage(this.message, "error")}
     `;
   }
 }

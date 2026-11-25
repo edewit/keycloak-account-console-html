@@ -1,6 +1,13 @@
 import { LitElement, html, css, nothing } from "lit";
 import { deleteSession, getDevices, getKeycloak } from "./api.js";
 import { consumeMessages } from "./i18n.js";
+import {
+  emitEvent,
+  pageChromeStyles,
+  renderLoadError,
+  renderLoading,
+  renderMessage,
+} from "./page.js";
 
 /**
  * @param {number} epochSeconds
@@ -50,16 +57,17 @@ export class DeviceActivity extends LitElement {
     messageTone: { state: true },
   };
 
-  static styles = css`
+  static styles = [
+    pageChromeStyles,
+    css`
     :host {
-      --account-device-gap: var(--account-gap, 1.25rem);
+      --account-gap: 1.25rem;
+      --account-message-margin: var(--account-gap);
       --account-device-max-width: var(--account-max-width, 42rem);
-      --account-device-label-color: var(--account-label-color, currentColor);
       --account-device-muted-color: var(--account-muted-color, currentColor);
       --account-device-border: var(--account-border-color, currentColor);
       --account-device-radius: var(--account-radius, 0.5rem);
       --account-device-error-color: var(--account-error-color, #b42318);
-      --account-device-success-color: var(--account-success-color, #027a48);
       --account-device-button-padding: var(
         --account-button-padding,
         0.5rem 1rem
@@ -78,22 +86,12 @@ export class DeviceActivity extends LitElement {
       max-width: var(--account-device-max-width);
     }
 
-    h1 {
-      margin: 0 0 0.35rem;
-      font-size: 1.5rem;
-    }
-
-    .description {
-      margin: 0 0 var(--account-device-gap);
-      color: var(--account-device-label-color);
-    }
-
     .toolbar {
       display: flex;
       flex-wrap: wrap;
       gap: 0.75rem;
       align-items: center;
-      margin: 0 0 var(--account-device-gap);
+      margin: 0 0 var(--account-gap);
     }
 
     .list {
@@ -203,19 +201,8 @@ export class DeviceActivity extends LitElement {
       color: var(--account-device-muted-color);
     }
 
-    .message {
-      margin: var(--account-device-gap) 0 0;
-      font-size: 0.9rem;
-    }
-
-    .message[data-tone="error"] {
-      color: var(--account-device-error-color);
-    }
-
-    .message[data-tone="success"] {
-      color: var(--account-device-success-color);
-    }
-  `;
+  `,
+  ];
 
   #i18n = consumeMessages(this);
 
@@ -238,22 +225,6 @@ export class DeviceActivity extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.#load();
-  }
-
-  /**
-   * @param {string} type
-   * @param {unknown} [detail]
-   * @param {{ cancelable?: boolean }} [options]
-   */
-  #emit(type, detail, options = {}) {
-    return this.dispatchEvent(
-      new CustomEvent(type, {
-        detail,
-        bubbles: true,
-        composed: true,
-        cancelable: Boolean(options.cancelable),
-      }),
-    );
   }
 
   /**
@@ -286,12 +257,12 @@ export class DeviceActivity extends LitElement {
       const devices = await getDevices();
       this.devices = this.#orderCurrentFirst(devices);
       this.status = "ready";
-      this.#emit("load", this.devices);
+      emitEvent(this, "load", this.devices);
     } catch (error) {
       this.status = "error";
       this.messageTone = "error";
       this.message = error instanceof Error ? error.message : String(error);
-      this.#emit("error", { phase: "load", error, message: this.message });
+      emitEvent(this, "error", { phase: "load", error, message: this.message });
     }
   }
 
@@ -353,7 +324,7 @@ export class DeviceActivity extends LitElement {
       return;
     }
     if (
-      !this.#emit(
+      !emitEvent(this, 
         "sign-out",
         { kind: "all" },
         { cancelable: true },
@@ -364,7 +335,7 @@ export class DeviceActivity extends LitElement {
     try {
       this.status = "saving";
       await deleteSession();
-      this.#emit("signed-out", { kind: "all" });
+      emitEvent(this, "signed-out", { kind: "all" });
       const keycloak = await getKeycloak();
       await keycloak.logout();
     } catch (error) {
@@ -373,7 +344,7 @@ export class DeviceActivity extends LitElement {
       this.message = this.#t("errorSignOutMessage", {
         error: error instanceof Error ? error.message : String(error),
       });
-      this.#emit("error", {
+      emitEvent(this, "error", {
         phase: "sign-out",
         error,
         message: this.message,
@@ -390,7 +361,7 @@ export class DeviceActivity extends LitElement {
       return;
     }
     if (
-      !this.#emit(
+      !emitEvent(this, 
         "sign-out",
         { kind: "session", session, device },
         { cancelable: true },
@@ -406,7 +377,7 @@ export class DeviceActivity extends LitElement {
         browser: session.browser ?? "",
         os: device.os ?? "",
       });
-      this.#emit("signed-out", { kind: "session", session, device });
+      emitEvent(this, "signed-out", { kind: "session", session, device });
       await this.#load();
     } catch (error) {
       this.status = "ready";
@@ -414,7 +385,7 @@ export class DeviceActivity extends LitElement {
       this.message = this.#t("errorSignOutMessage", {
         error: error instanceof Error ? error.message : String(error),
       });
-      this.#emit("error", {
+      emitEvent(this, "error", {
         phase: "sign-out",
         error,
         message: this.message,
@@ -478,13 +449,11 @@ export class DeviceActivity extends LitElement {
 
   render() {
     if (this.status === "loading" && !this.devices) {
-      return html`<p part="message" class="message">Loading devices…</p>`;
+      return renderLoading("Loading devices…");
     }
 
     if (this.status === "error" && !this.devices) {
-      return html`
-        <p part="message" class="message" data-tone="error">${this.message}</p>
-      `;
+      return renderLoadError(this.message);
     }
 
     const rows = this.#rows;
@@ -528,15 +497,7 @@ export class DeviceActivity extends LitElement {
             </ul>
           `
         : html`<p class="empty" part="empty">${this.#t("signedInDevices")}</p>`}
-      ${this.message
-        ? html`<p
-            part="message"
-            class="message"
-            data-tone=${this.messageTone || nothing}
-          >
-            ${this.message}
-          </p>`
-        : nothing}
+      ${renderMessage(this.message, this.messageTone)}
     `;
   }
 }

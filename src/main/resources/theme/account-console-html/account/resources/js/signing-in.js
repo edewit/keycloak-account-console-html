@@ -1,6 +1,13 @@
 import { LitElement, html, css, nothing } from "lit";
 import { getCredentials, getKeycloak } from "./api.js";
 import { consumeMessages } from "./i18n.js";
+import {
+  emitEvent,
+  pageChromeStyles,
+  renderLoadError,
+  renderLoading,
+  renderMessage,
+} from "./page.js";
 
 /**
  * @param {number} epochMs
@@ -33,11 +40,12 @@ export class SigningIn extends LitElement {
     message: { state: true },
   };
 
-  static styles = css`
+  static styles = [
+    pageChromeStyles,
+    css`
     :host {
-      --account-signing-gap: var(--account-gap, 1rem);
+      --account-gap: 1rem;
       --account-signing-max-width: 40rem;
-      --account-signing-label-color: var(--account-label-color, currentColor);
       --account-signing-muted-color: var(--account-muted-color, currentColor);
       --account-signing-border: var(--account-border-color, currentColor);
       --account-signing-radius: var(--account-radius, 0.35rem);
@@ -59,11 +67,6 @@ export class SigningIn extends LitElement {
       max-width: var(--account-signing-max-width);
     }
 
-    h1 {
-      margin: 0 0 0.35rem;
-      font-size: 1.5rem;
-    }
-
     h2 {
       margin: 1.5rem 0 0.75rem;
       font-size: 1.25rem;
@@ -72,11 +75,6 @@ export class SigningIn extends LitElement {
     h3 {
       margin: 0 0 0.25rem;
       font-size: 1.05rem;
-    }
-
-    .description {
-      margin: 0 0 var(--account-signing-gap);
-      color: var(--account-signing-label-color);
     }
 
     .type-header {
@@ -206,15 +204,8 @@ export class SigningIn extends LitElement {
       text-underline-offset: 0.15em;
     }
 
-    .message {
-      margin: 0;
-      font-size: 0.9rem;
-    }
-
-    .message[data-tone="error"] {
-      color: var(--account-signing-error-color);
-    }
-  `;
+  `,
+  ];
 
   #i18n = consumeMessages(this);
 
@@ -253,33 +244,17 @@ export class SigningIn extends LitElement {
     this.#load();
   }
 
-  /**
-   * @param {string} type
-   * @param {unknown} [detail]
-   * @param {{ cancelable?: boolean }} [options]
-   */
-  #emit(type, detail, options = {}) {
-    return this.dispatchEvent(
-      new CustomEvent(type, {
-        detail,
-        bubbles: true,
-        composed: true,
-        cancelable: Boolean(options.cancelable),
-      }),
-    );
-  }
-
   async #load() {
     this.status = "loading";
     this.message = "";
     try {
       this.credentials = await getCredentials();
       this.status = "ready";
-      this.#emit("load", this.credentials);
+      emitEvent(this, "load", this.credentials);
     } catch (error) {
       this.status = "error";
       this.message = error instanceof Error ? error.message : String(error);
-      this.#emit("error", { phase: "load", error, message: this.message });
+      emitEvent(this, "error", { phase: "load", error, message: this.message });
     }
   }
 
@@ -289,7 +264,7 @@ export class SigningIn extends LitElement {
    */
   async #runAction(action, meta) {
     if (
-      !this.#emit("action", { action, ...meta }, { cancelable: true })
+      !emitEvent(this, "action", { action, ...meta }, { cancelable: true })
     ) {
       return;
     }
@@ -298,7 +273,7 @@ export class SigningIn extends LitElement {
       await keycloak.login({ action });
     } catch (error) {
       this.message = error instanceof Error ? error.message : String(error);
-      this.#emit("error", { phase: "action", error, message: this.message });
+      emitEvent(this, "error", { phase: "action", error, message: this.message });
     }
   }
 
@@ -507,13 +482,11 @@ export class SigningIn extends LitElement {
 
   render() {
     if (this.status === "loading") {
-      return html`<p part="message" class="message">Loading credentials…</p>`;
+      return renderLoading("Loading credentials…");
     }
 
     if (this.status === "error" && !this.credentials) {
-      return html`
-        <p part="message" class="message" data-tone="error">${this.message}</p>
-      `;
+      return renderLoadError(this.message);
     }
 
     return html`
@@ -535,11 +508,7 @@ export class SigningIn extends LitElement {
           </section>
         `,
       )}
-      ${this.message
-        ? html`<p part="message" class="message" data-tone="error">
-            ${this.message}
-          </p>`
-        : nothing}
+      ${renderMessage(this.message, "error")}
     `;
   }
 }

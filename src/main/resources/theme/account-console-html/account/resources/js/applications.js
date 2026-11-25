@@ -6,6 +6,13 @@ import {
   getEnvironment,
 } from "./api.js";
 import { consumeMessages } from "./i18n.js";
+import {
+  emitEvent,
+  pageChromeStyles,
+  renderLoadError,
+  renderLoading,
+  renderMessage,
+} from "./page.js";
 
 /**
  * @param {number} epochMs
@@ -61,16 +68,17 @@ export class Applications extends LitElement {
     messageTone: { state: true },
   };
 
-  static styles = css`
+  static styles = [
+    pageChromeStyles,
+    css`
     :host {
-      --account-apps-gap: var(--account-gap, 1.25rem);
+      --account-gap: 1.25rem;
+      --account-message-margin: var(--account-gap);
       --account-apps-max-width: var(--account-max-width, 42rem);
-      --account-apps-label-color: var(--account-label-color, currentColor);
       --account-apps-muted-color: var(--account-muted-color, currentColor);
       --account-apps-border: var(--account-border-color, currentColor);
       --account-apps-radius: var(--account-radius, 0.5rem);
       --account-apps-error-color: var(--account-error-color, #b42318);
-      --account-apps-success-color: var(--account-success-color, #027a48);
       --account-apps-button-padding: var(
         --account-button-padding,
         0.5rem 1rem
@@ -79,16 +87,6 @@ export class Applications extends LitElement {
       display: block;
       width: 100%;
       max-width: var(--account-apps-max-width);
-    }
-
-    h1 {
-      margin: 0 0 0.35rem;
-      font-size: 1.5rem;
-    }
-
-    .description {
-      margin: 0 0 var(--account-apps-gap);
-      color: var(--account-apps-label-color);
     }
 
     .list {
@@ -213,25 +211,13 @@ export class Applications extends LitElement {
       color: var(--account-apps-muted-color);
     }
 
-    .message {
-      margin: var(--account-apps-gap) 0 0;
-      font-size: 0.9rem;
-    }
-
-    .message[data-tone="error"] {
-      color: var(--account-apps-error-color);
-    }
-
-    .message[data-tone="success"] {
-      color: var(--account-apps-success-color);
-    }
-
     .info {
       margin: 0.75rem 0 0;
       font-size: 0.85rem;
       color: var(--account-apps-muted-color);
     }
-  `;
+  `,
+  ];
 
   #i18n = consumeMessages(this);
 
@@ -258,22 +244,6 @@ export class Applications extends LitElement {
     this.#load();
   }
 
-  /**
-   * @param {string} type
-   * @param {unknown} [detail]
-   * @param {{ cancelable?: boolean }} [options]
-   */
-  #emit(type, detail, options = {}) {
-    return this.dispatchEvent(
-      new CustomEvent(type, {
-        detail,
-        bubbles: true,
-        composed: true,
-        cancelable: Boolean(options.cancelable),
-      }),
-    );
-  }
-
   async #load() {
     this.status = "loading";
     try {
@@ -289,12 +259,12 @@ export class Applications extends LitElement {
         ),
       );
       this.status = "ready";
-      this.#emit("load", this.applications);
+      emitEvent(this, "load", this.applications);
     } catch (error) {
       this.status = "error";
       this.messageTone = "error";
       this.message = error instanceof Error ? error.message : String(error);
-      this.#emit("error", { phase: "load", error, message: this.message });
+      emitEvent(this, "error", { phase: "load", error, message: this.message });
     }
   }
 
@@ -350,7 +320,7 @@ export class Applications extends LitElement {
       return;
     }
     if (
-      !this.#emit(
+      !emitEvent(this, 
         "end-session",
         { application: app },
         { cancelable: true },
@@ -363,7 +333,7 @@ export class Applications extends LitElement {
       await deleteApplicationSessions(app.clientId);
       this.messageTone = "success";
       this.message = this.#t("endApplicationSessionSuccess", { name });
-      this.#emit("removed", { kind: "session", application: app });
+      emitEvent(this, "removed", { kind: "session", application: app });
       await this.#load();
     } catch (error) {
       this.status = "ready";
@@ -371,7 +341,7 @@ export class Applications extends LitElement {
       this.message = this.#t("endApplicationSessionError", {
         error: error instanceof Error ? error.message : String(error),
       });
-      this.#emit("error", {
+      emitEvent(this, "error", {
         phase: "end-session",
         error,
         message: this.message,
@@ -391,7 +361,7 @@ export class Applications extends LitElement {
       return;
     }
     if (
-      !this.#emit(
+      !emitEvent(this, 
         "remove-consent",
         { application: app },
         { cancelable: true },
@@ -404,7 +374,7 @@ export class Applications extends LitElement {
       await deleteConsent(app.clientId);
       this.messageTone = "success";
       this.message = this.#t("removeConsentSuccess");
-      this.#emit("removed", { kind: "consent", application: app });
+      emitEvent(this, "removed", { kind: "consent", application: app });
       await this.#load();
     } catch (error) {
       this.status = "ready";
@@ -412,7 +382,7 @@ export class Applications extends LitElement {
       this.message = this.#t("removeConsentError", {
         error: error instanceof Error ? error.message : String(error),
       });
-      this.#emit("error", {
+      emitEvent(this, "error", {
         phase: "remove-consent",
         error,
         message: this.message,
@@ -579,13 +549,11 @@ export class Applications extends LitElement {
 
   render() {
     if (this.status === "loading" && !this.applications) {
-      return html`<p part="message" class="message">Loading applications…</p>`;
+      return renderLoading("Loading applications…");
     }
 
     if (this.status === "error" && !this.applications) {
-      return html`
-        <p part="message" class="message" data-tone="error">${this.message}</p>
-      `;
+      return renderLoadError(this.message);
     }
 
     const apps = this.applications ?? [];
@@ -606,15 +574,7 @@ export class Applications extends LitElement {
             </ul>
           `
         : html`<p class="empty" part="empty">${this.#t("applications")}</p>`}
-      ${this.message
-        ? html`<p
-            part="message"
-            class="message"
-            data-tone=${this.messageTone || nothing}
-          >
-            ${this.message}
-          </p>`
-        : nothing}
+      ${renderMessage(this.message, this.messageTone)}
     `;
   }
 }

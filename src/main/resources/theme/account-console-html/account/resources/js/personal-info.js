@@ -2,6 +2,13 @@ import { LitElement, html, css, nothing } from "lit";
 import { getPersonalInfo, savePersonalInfo } from "./api.js";
 import { consumeMessages } from "./i18n.js";
 import {
+  emitEvent,
+  pageChromeStyles,
+  renderLoadError,
+  renderLoading,
+  renderMessage,
+} from "./page.js";
+import {
   ROOT_FIELDS,
   attributeSlotName,
   attributeToInputProps,
@@ -50,69 +57,46 @@ export class PersonalInfo extends LitElement {
     messageTone: { state: true },
   };
 
-  static styles = css`
-    :host {
-      --account-personal-gap: var(--account-gap, 1.5rem);
-      --account-personal-label-color: var(--account-label-color, currentColor);
-      --account-personal-max-width: var(--account-max-width, 42rem);
-      --account-personal-error-color: var(--account-error-color, #b42318);
-      --account-personal-success-color: var(--account-success-color, #027a48);
+  static styles = [
+    pageChromeStyles,
+    css`
+      :host {
+        --account-gap: 1.5rem;
+        --account-personal-max-width: var(--account-max-width, 42rem);
 
-      display: block;
-      width: 100%;
-      max-width: var(--account-personal-max-width);
-    }
+        display: block;
+        width: 100%;
+        max-width: var(--account-personal-max-width);
+      }
 
-    h1 {
-      margin: 0 0 0.35rem;
-      font-size: 1.5rem;
-    }
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: var(--account-gap);
+        width: 100%;
+      }
 
-    .description {
-      margin: 0 0 var(--account-personal-gap);
-      color: var(--account-personal-label-color);
-    }
+      .field,
+      ::slotted(.field),
+      ::slotted([slot="field"]),
+      ::slotted([slot^="attribute:"]) {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
 
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: var(--account-personal-gap);
-      width: 100%;
-    }
+      account-field,
+      account-input {
+        width: 100%;
+      }
 
-    .field,
-    ::slotted(.field),
-    ::slotted([slot="field"]),
-    ::slotted([slot^="attribute:"]) {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    account-field,
-    account-input {
-      width: 100%;
-    }
-
-    .actions {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-    }
-
-    .message {
-      margin: 0;
-      font-size: 0.9rem;
-    }
-
-    .message[data-tone="error"] {
-      color: var(--account-personal-error-color);
-    }
-
-    .message[data-tone="success"] {
-      color: var(--account-personal-success-color);
-    }
-  `;
+      .actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+      }
+    `,
+  ];
 
   #i18n = consumeMessages(this);
 
@@ -133,22 +117,6 @@ export class PersonalInfo extends LitElement {
     this.#load();
   }
 
-  /**
-   * @param {string} type
-   * @param {unknown} [detail]
-   * @param {{ cancelable?: boolean }} [options]
-   */
-  #emit(type, detail, options = {}) {
-    return this.dispatchEvent(
-      new CustomEvent(type, {
-        detail,
-        bubbles: true,
-        composed: true,
-        cancelable: Boolean(options.cancelable),
-      }),
-    );
-  }
-
   async #load() {
     this.status = "loading";
     this.message = "";
@@ -159,13 +127,13 @@ export class PersonalInfo extends LitElement {
         throw new Error("User profile metadata is not available");
       }
       this.status = "ready";
-      this.#emit("load", this.user);
+      emitEvent(this, "load", this.user);
       this.updateComplete.then(() => this.#hydrateSlottedFields());
     } catch (error) {
       this.status = "error";
       this.messageTone = "error";
       this.message = error instanceof Error ? error.message : String(error);
-      this.#emit("error", { phase: "load", error, message: this.message });
+      emitEvent(this, "error", { phase: "load", error, message: this.message });
     }
   }
 
@@ -273,7 +241,7 @@ export class PersonalInfo extends LitElement {
     this.#applyFormData(/** @type {HTMLFormElement} */ (event.target));
 
     const { userProfileMetadata: _meta, ...payload } = this.user;
-    if (!this.#emit("save", { user: this.user, payload }, { cancelable: true })) {
+    if (!emitEvent(this, "save", { user: this.user, payload }, { cancelable: true })) {
       return;
     }
 
@@ -286,13 +254,13 @@ export class PersonalInfo extends LitElement {
       this.status = "ready";
       this.messageTone = "success";
       this.message = this.#t("accountUpdatedMessage");
-      this.#emit("saved", this.user);
+      emitEvent(this, "saved", this.user);
       this.updateComplete.then(() => this.#hydrateSlottedFields());
     } catch (error) {
       this.status = "ready";
       this.messageTone = "error";
       this.message = error instanceof Error ? error.message : String(error);
-      this.#emit("error", { phase: "save", error, message: this.message });
+      emitEvent(this, "error", { phase: "save", error, message: this.message });
     }
   }
 
@@ -333,13 +301,11 @@ export class PersonalInfo extends LitElement {
 
   render() {
     if (this.status === "loading") {
-      return html`<p part="message" class="message">Loading personal info…</p>`;
+      return renderLoading("Loading personal info…");
     }
 
     if (this.status === "error" && !this.user) {
-      return html`
-        <p part="message" class="message" data-tone="error">${this.message}</p>
-      `;
+      return renderLoadError(this.message);
     }
 
     const attributes = this.#attributes();
@@ -369,15 +335,7 @@ export class PersonalInfo extends LitElement {
                 </div>
               </slot>
             `}
-        ${this.message
-          ? html`<p
-              part="message"
-              class="message"
-              data-tone=${this.messageTone}
-            >
-              ${this.message}
-            </p>`
-          : nothing}
+        ${renderMessage(this.message, this.messageTone)}
       </form>
     `;
   }
