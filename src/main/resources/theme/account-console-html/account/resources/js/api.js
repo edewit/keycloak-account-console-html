@@ -159,3 +159,85 @@ export async function unlinkAccount(providerAlias) {
   }
   return response;
 }
+
+/**
+ * Organizations the signed-in user belongs to (Account REST `/organizations`).
+ * @returns {Promise<any[]>}
+ */
+export async function getOrganizations() {
+  const response = await accountFetch("/organizations");
+  if (!response.ok) {
+    throw new Error(`Failed to load organizations (${response.status})`);
+  }
+  return response.json();
+}
+
+/**
+ * UMA resources owned by the user, or shared with them.
+ *
+ * @param {{ shared?: boolean, name?: string, first?: number, max?: number }} [query]
+ * @returns {Promise<any[]>}
+ */
+export async function getResources(query = {}) {
+  const { shared = false, ...rest } = query;
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(rest)) {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  }
+  const qs = params.toString();
+  const path = shared ? "/resources/shared-with-me" : "/resources";
+  const response = await accountFetch(`${path}${qs ? `?${qs}` : ""}`);
+  if (!response.ok) {
+    throw new Error(`Failed to load resources (${response.status})`);
+  }
+  return response.json();
+}
+
+/**
+ * Pending permission requests for a resource.
+ * @param {string} resourceId
+ * @returns {Promise<any[]>}
+ */
+export async function getPermissionRequests(resourceId) {
+  const response = await accountFetch(
+    `/resources/${encodeURIComponent(resourceId)}/permissions/requests`,
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to load permission requests (${response.status})`);
+  }
+  return response.json();
+}
+
+/**
+ * Verifiable credential configurations available to the user
+ * (Account REST `/verifiable-credentials`).
+ * @returns {Promise<any[]>}
+ */
+export async function getVerifiableCredentials() {
+  const response = await accountFetch("/verifiable-credentials");
+  if (!response.ok) {
+    throw new Error(
+      `Failed to load verifiable credentials (${response.status})`,
+    );
+  }
+  return response.json();
+}
+
+/**
+ * Delete / revoke a verifiable credential configuration.
+ * @param {string} credentialScopeName
+ */
+export async function deleteVerifiableCredential(credentialScopeName) {
+  const response = await accountFetch(
+    `/verifiable-credentials/${encodeURIComponent(credentialScopeName)}`,
+    { method: "DELETE" },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `Failed to delete verifiable credential (${response.status})`,
+    );
+  }
+  return response;
+}

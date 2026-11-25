@@ -27,7 +27,7 @@ export function label(t, name) {
 /**
  * Events dispatched by account page components via {@link emitEvent}.
  *
- * @typedef {"load" | "error" | "save" | "saved" | "action" | "sign-out" | "signed-out" | "end-session" | "remove-consent" | "removed" | "link" | "unlink" | "unlinked"} AccountPageEventType
+ * @typedef {"load" | "error" | "save" | "saved" | "action" | "sign-out" | "signed-out" | "end-session" | "remove-consent" | "removed" | "link" | "unlink" | "unlinked" | "issue" | "revoke" | "revoked"} AccountPageEventType
  */
 
 /**

@@ -22,6 +22,9 @@ Requires **Keycloak 26.8+**.
   - `account-applications` — applications with consent / session controls
   - `account-groups` — group memberships (optional direct-only filter)
   - `account-linked-accounts` — federated IdP link / unlink
+  - `account-organizations` — organization memberships
+  - `account-resources` — UMA resources (my + shared with me)
+  - `account-verifiable-credentials` — OID4VCI issue / revoke
   - `account-field`, `account-input`, `account-save-button` — form primitives
 
 ## Local development (live HTML)
@@ -282,6 +285,68 @@ Loads `/linked-accounts?linked=true|false`. **Link** runs `keycloak.login({ acti
 </account-shell>
 ```
 
+### Organizations (`account-organizations`)
+
+Loads `/organizations` and lists memberships (name, alias, description, domains).
+
+| Slot | Purpose |
+|------|---------|
+| `title` | Page heading |
+| `description` | Intro text |
+
+| Event | When | Notes |
+|-------|------|--------|
+| `load` | Organizations loaded | `detail` is the org list |
+| `error` | Load failure | `detail` is `{ phase, error, message }` |
+
+```html
+<account-shell>
+  <account-organizations></account-organizations>
+</account-shell>
+```
+
+### Resources (`account-resources`)
+
+Tabs for **My resources** (`GET /resources`) and **Shared with me** (`GET /resources/shared-with-me`). Owned rows also fetch pending permission requests.
+
+| Slot | Purpose |
+|------|---------|
+| `title` | Page heading |
+| `description` | Intro text |
+
+| Event | When | Notes |
+|-------|------|--------|
+| `load` | Tab data loaded | `detail` is `{ tab, resources }` |
+| `error` | Load failure | `detail` is `{ phase, error, message }` |
+
+```html
+<account-shell>
+  <account-resources></account-resources>
+</account-shell>
+```
+
+### Verifiable credentials (`account-verifiable-credentials`)
+
+Loads `/verifiable-credentials`. **Issue to wallet** runs `keycloak.login({ action: "verifiable_credential_offer:<base64>" })`; **Revoke** (when the user has `manage-account` or `manage-verifiable-credentials`) calls `DELETE /verifiable-credentials/{credentialScopeName}`.
+
+| Slot | Purpose |
+|------|---------|
+| `title` | Page heading |
+| `description` | Intro text |
+
+| Event | When | Notes |
+|-------|------|--------|
+| `load` | Credentials loaded | `detail` is the credential list |
+| `issue` / `revoke` | Before the action | Cancelable; `detail` is `{ credential }` |
+| `revoked` | After successful revoke | Same `detail` shape |
+| `error` | Load or action failure | `detail` is `{ phase, error, message }` |
+
+```html
+<account-shell>
+  <account-verifiable-credentials></account-verifiable-credentials>
+</account-shell>
+```
+
 ```html
 <script type="module">
   const form = document.querySelector("account-personal-info");
@@ -305,6 +370,9 @@ Components also expose `::part(...)` hooks, for example:
 - `account-applications::part(title|description|list|item|details|actions|message|empty)`
 - `account-groups::part(title|description|toolbar|list|item|message|empty)`
 - `account-linked-accounts::part(title|description|section|list|item|actions|message|empty|badge)`
+- `account-organizations::part(title|description|list|item|message|empty)`
+- `account-resources::part(title|description|tabs|list|item|message|empty|badge)`
+- `account-verifiable-credentials::part(title|description|list|item|actions|message|empty)`
 - `account-input::part(input)`
 - `account-save-button::part(button)`
 
