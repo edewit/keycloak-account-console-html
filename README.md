@@ -307,7 +307,7 @@ Loads `/organizations` and lists memberships (name, alias, description, domains)
 
 ### Resources (`account-resources`)
 
-Tabs for **My resources** (`GET /resources`) and **Shared with me** (`GET /resources/shared-with-me`). Owned rows also fetch pending permission requests.
+Tabs for **My resources** (`GET /resources`) and **Shared with me** (`GET /resources/shared-with-me`). Owned rows load pending permission requests and support **Share**, **Edit**, **Unshare**, and approve/deny request dialogs (`GET`/`PUT /resources/{id}/permissions`).
 
 | Slot | Purpose |
 |------|---------|
@@ -317,7 +317,9 @@ Tabs for **My resources** (`GET /resources`) and **Shared with me** (`GET /resou
 | Event | When | Notes |
 |-------|------|--------|
 | `load` | Tab data loaded | `detail` is `{ tab, resources }` |
-| `error` | Load failure | `detail` is `{ phase, error, message }` |
+| `share` / `unshare` / `update-permissions` / `approve-request` / `deny-request` | Before the action | Cancelable |
+| `shared` / `unshared` / `permissions-updated` | After success | Includes resource (+ username/scopes or permissions) |
+| `error` | Load or action failure | `detail` is `{ phase, error, message }` |
 
 ```html
 <account-shell>
@@ -371,7 +373,7 @@ Components also expose `::part(...)` hooks, for example:
 - `account-groups::part(title|description|toolbar|list|item|message|empty)`
 - `account-linked-accounts::part(title|description|section|list|item|actions|message|empty|badge)`
 - `account-organizations::part(title|description|list|item|message|empty)`
-- `account-resources::part(title|description|tabs|list|item|message|empty|badge)`
+- `account-resources::part(title|description|tabs|list|item|actions|dialog|message|empty|badge)`
 - `account-verifiable-credentials::part(title|description|list|item|actions|message|empty)`
 - `account-input::part(input)`
 - `account-save-button::part(button)`

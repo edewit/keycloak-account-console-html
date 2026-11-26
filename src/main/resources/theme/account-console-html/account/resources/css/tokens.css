@@ -10,6 +10,8 @@
   --account-radius: 0.5rem;
   --account-max-width: 42rem;
 
+  --account-fg: light-dark(#1b1b1b, #f0f0f0);
+  --account-surface: light-dark(#ffffff, #1b1b1b);
   --account-label-color: color-mix(in srgb, currentColor 70%, transparent);
   --account-muted-color: color-mix(in srgb, currentColor 55%, transparent);
   --account-border-color: color-mix(in srgb, currentColor 25%, transparent);

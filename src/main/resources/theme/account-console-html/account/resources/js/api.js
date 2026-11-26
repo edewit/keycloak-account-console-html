@@ -211,6 +211,45 @@ export async function getPermissionRequests(resourceId) {
 }
 
 /**
+ * Current permissions granted on a resource.
+ * @param {string} resourceId
+ * @returns {Promise<any[]>}
+ */
+export async function getPermissions(resourceId) {
+  const response = await accountFetch(
+    `/resources/${encodeURIComponent(resourceId)}/permissions`,
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to load permissions (${response.status})`);
+  }
+  return response.json();
+}
+
+/**
+ * Replace / update permissions on a resource
+ * (`PUT /resources/{id}/permissions`).
+ *
+ * @param {string} resourceId
+ * @param {{ username: string, scopes: (string | { name?: string })[] }[]} permissions
+ */
+export async function updatePermissions(resourceId, permissions) {
+  const body = permissions.map((permission) => ({
+    username: permission.username,
+    scopes: (permission.scopes ?? []).map((scope) =>
+      typeof scope === "string" ? scope : scope.name,
+    ),
+  }));
+  const response = await accountFetch(
+    `/resources/${encodeURIComponent(resourceId)}/permissions`,
+    { method: "PUT", body },
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to update permissions (${response.status})`);
+  }
+  return response;
+}
+
+/**
  * Verifiable credential configurations available to the user
  * (Account REST `/verifiable-credentials`).
  * @returns {Promise<any[]>}
