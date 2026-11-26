@@ -199,7 +199,10 @@ All bubble and are composed.
 
 ### i18n (Lit context)
 
-`account-shell` fetches theme messages and provides them on `messagesContext`. Any descendant can consume:
+`account-shell` fetches theme messages (no login required) in parallel with
+keycloak-js init, then provides them on `messagesContext` before revealing the
+chrome—so pages never need a separate i18n ready gate. A document `ContextRoot`
+keeps context working across slots/shadow roots.
 
 ```js
 import { consumeMessages } from "./i18n.js";

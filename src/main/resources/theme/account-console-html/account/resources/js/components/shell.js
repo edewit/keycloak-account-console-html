@@ -1,5 +1,6 @@
 import { LitElement, html, css, nothing } from "lit";
 import { ContextProvider } from "@lit/context";
+import { getKeycloak } from "../account-client.js";
 import {
   emptyI18n,
   loadI18n,
@@ -146,14 +147,28 @@ export class AccountShell extends LitElement {
 
   async #loadMessages() {
     this.status = "loading";
+    // Warm SSO in parallel — translations only need environment.json.
+    void getKeycloak().catch((error) => {
+      console.warn("Keycloak init while loading messages", error);
+    });
     try {
-      this.i18n = await loadI18n();
-      this.#messagesProvider.setValue(this.i18n);
+      const i18n = await loadI18n();
+      this.i18n = i18n;
+      // Publish before revealing the chrome so early consumers (slotted pages)
+      // get a subscribe notification while still hidden.
+      this.#messagesProvider.setValue(i18n);
+      await this.updateComplete;
+      this.status = "ready";
+      // Toolbar / sidebar mount on this render — notify again so any consumer
+      // that connected during the ready paint sees the same bundle.
+      await this.updateComplete;
+      this.#messagesProvider.setValue(i18n);
     } catch (error) {
       console.warn("Failed to load account messages", error);
-      this.i18n = emptyI18n();
-      this.#messagesProvider.setValue(this.i18n);
-    } finally {
+      const fallback = emptyI18n();
+      this.i18n = fallback;
+      this.#messagesProvider.setValue(fallback);
+      await this.updateComplete;
       this.status = "ready";
     }
   }

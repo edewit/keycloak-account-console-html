@@ -1,5 +1,20 @@
-import { createContext, ContextConsumer } from "@lit/context";
+import { createContext, ContextConsumer, ContextRoot } from "@lit/context";
 import { getEnvironment } from "./account-client.js";
+
+/** Ensure context events work across shadow roots / slots (once per document). */
+function ensureContextRoot() {
+  if (typeof document === "undefined") {
+    return;
+  }
+  // @ts-expect-error custom bookkeeping on document
+  if (document.__accountContextRoot) {
+    return;
+  }
+  const root = new ContextRoot();
+  root.attach(document);
+  // @ts-expect-error custom bookkeeping on document
+  document.__accountContextRoot = root;
+}
 
 /**
  * Shared account-console i18n.
@@ -100,9 +115,12 @@ export async function fetchMessages(serverBaseUrl, realm, locale) {
 
 /**
  * Load i18n for the current account environment locale.
+ * Uses `environment.json` + the public theme messages endpoint — no login
+ * required (safe to run in parallel with keycloak-js init).
  * @returns {Promise<AccountI18n>}
  */
 export async function loadI18n() {
+  ensureContextRoot();
   const env = await getEnvironment();
   const locale = env.locale || "en";
   const messages = await fetchMessages(env.serverBaseUrl, env.realm, locale);
@@ -111,9 +129,11 @@ export async function loadI18n() {
 
 /**
  * Subscribe a Lit host to the shell-provided messages context.
+ * Re-renders the host whenever translations arrive or change.
  * @param {import('lit').ReactiveControllerHost & HTMLElement} host
  */
 export function consumeMessages(host) {
+  ensureContextRoot();
   return new ContextConsumer(host, {
     context: messagesContext,
     subscribe: true,
