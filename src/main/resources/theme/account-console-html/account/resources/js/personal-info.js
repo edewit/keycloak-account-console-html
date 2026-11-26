@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "lit";
-import { getPersonalInfo, savePersonalInfo } from "./api.js";
+import { AccountApiError, getPersonalInfo, savePersonalInfo } from "./api.js";
 import { consumeMessages } from "./i18n.js";
 import {
   emitEvent,
@@ -13,6 +13,7 @@ import {
   attributeSlotName,
   attributeToInputProps,
   normalizeFieldName,
+  userProfileFieldErrors,
 } from "./user-profile.js";
 import "./components/save-button.js";
 import "./components/input.js";
@@ -55,6 +56,8 @@ export class PersonalInfo extends LitElement {
     message: { state: true },
     /** @type {"" | "error" | "success"} */
     messageTone: { state: true },
+    /** @type {Record<string, string>} */
+    fieldErrors: { state: true },
   };
 
   static styles = [
@@ -105,6 +108,7 @@ export class PersonalInfo extends LitElement {
     this.status = "loading";
     this.message = "";
     this.messageTone = "";
+    this.fieldErrors = {};
   }
 
   /** @returns {(key: string, params?: Record<string, string | number>) => string} */
@@ -121,6 +125,7 @@ export class PersonalInfo extends LitElement {
     this.status = "loading";
     this.message = "";
     this.messageTone = "";
+    this.fieldErrors = {};
     try {
       this.user = await getPersonalInfo();
       if (!this.#attributes().length) {
@@ -248,6 +253,7 @@ export class PersonalInfo extends LitElement {
     this.status = "saving";
     this.message = "";
     this.messageTone = "";
+    this.fieldErrors = {};
     try {
       await savePersonalInfo(payload);
       this.user = await getPersonalInfo();
@@ -258,9 +264,23 @@ export class PersonalInfo extends LitElement {
       this.updateComplete.then(() => this.#hydrateSlottedFields());
     } catch (error) {
       this.status = "ready";
+      const fieldErrors =
+        error instanceof AccountApiError && error.errors?.length
+          ? userProfileFieldErrors(error.errors, this.#t)
+          : {};
+      this.fieldErrors = fieldErrors;
       this.messageTone = "error";
-      this.message = error instanceof Error ? error.message : String(error);
-      emitEvent(this, "error", { phase: "save", error, message: this.message });
+      this.message = Object.keys(fieldErrors).length
+        ? this.#t("accountUpdatedError")
+        : error instanceof Error
+          ? error.message
+          : String(error);
+      emitEvent(this, "error", {
+        phase: "save",
+        error,
+        message: this.message,
+        fieldErrors,
+      });
     }
   }
 
@@ -269,10 +289,12 @@ export class PersonalInfo extends LitElement {
    */
   #renderField(attribute) {
     const props = attributeToInputProps(attribute);
+    const fieldError = this.fieldErrors[props.name] ?? "";
     const defaultField = html`
       <account-field
         part="field"
         label=${props.label}
+        error=${fieldError}
         ?required=${props.required}
       >
         <account-input
@@ -335,7 +357,7 @@ export class PersonalInfo extends LitElement {
                 </div>
               </slot>
             `}
-        ${renderMessage(this.message, this.messageTone)}
+        ${renderMessage(this, this.message, this.messageTone)}
       </form>
     `;
   }

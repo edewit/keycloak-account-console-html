@@ -508,7 +508,7 @@ export class SigningIn extends LitElement {
           </section>
         `,
       )}
-      ${renderMessage(this.message, "error")}
+      ${renderMessage(this, this.message, "error")}
     `;
   }
 }

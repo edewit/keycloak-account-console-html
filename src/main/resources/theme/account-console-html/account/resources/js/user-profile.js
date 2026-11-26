@@ -77,6 +77,62 @@ export function displayName(raw) {
 }
 
 /**
+ * @param {(key: string, params?: Record<string, string | number>) => string} t
+ * @param {unknown} value
+ * @returns {string}
+ */
+function resolveErrorParam(t, value) {
+  if (value == null) {
+    return "";
+  }
+  const text = String(value);
+  if (text.startsWith("${") && text.endsWith("}")) {
+    return t(text.slice(2, -1));
+  }
+  return text;
+}
+
+/**
+ * Map Keycloak user-profile validation errors to per-field messages.
+ *
+ * @param {Array<{ field?: string, errorMessage?: string, params?: unknown[] }> | undefined} errors
+ * @param {(key: string, params?: Record<string, string | number>) => string} t
+ * @returns {Record<string, string>}
+ */
+export function userProfileFieldErrors(errors, t) {
+  /** @type {Record<string, string[]>} */
+  const byField = {};
+
+  for (const entry of errors ?? []) {
+    const field = entry?.field;
+    const errorMessage = entry?.errorMessage;
+    if (!field || !errorMessage) {
+      continue;
+    }
+
+    const key =
+      errorMessage.startsWith("${") && errorMessage.endsWith("}")
+        ? errorMessage.slice(2, -1)
+        : errorMessage;
+    /** @type {Record<string, string>} */
+    const params = {};
+    (entry.params ?? []).forEach((param, index) => {
+      params[String(index)] = resolveErrorParam(t, param);
+    });
+
+    const message = t(key, params);
+    (byField[field] ??= []).push(message);
+  }
+
+  return Object.fromEntries(
+    Object.entries(byField).map(([field, messages]) => [
+      field,
+      [...new Set(messages)].join("; "),
+    ]),
+  );
+}
+
+/**
  * Map a user-profile attribute to primitive `<account-input>` props.
  *
  * @param {any} attribute

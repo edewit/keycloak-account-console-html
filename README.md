@@ -27,6 +27,7 @@ Requires **Keycloak 26.8+**.
   - `account-resources` — UMA resources (my + shared with me)
   - `account-resource-share-dialog` / `account-resource-edit-dialog` / `account-resource-requests-dialog`
   - `account-dialog` — reusable native `<dialog>` shell
+  - `account-alert` — floating top-right status toast (auto-dismiss 8s)
   - `account-verifiable-credentials` — OID4VCI issue / revoke
   - `account-field`, `account-input`, `account-save-button` — form primitives
 
@@ -195,7 +196,11 @@ All bubble and are composed.
 | `load` | User profile loaded | `detail` is the user |
 | `save` | Before POST | Cancelable; `detail` is `{ user, payload }` |
 | `saved` | After successful save | `detail` is the refreshed user |
-| `error` | Load or save failure | `detail` is `{ phase, error, message }` |
+| `error` | Load or save failure | `detail` is `{ phase, error, message, fieldErrors? }` |
+
+Validation errors from save are shown on the matching `<account-field>` (translated
+`errorMessage` keys) and a general `accountUpdatedError` toast; `fieldErrors` is
+a `Record<fieldName, message>` in the `error` event detail.
 
 ### i18n (Lit context)
 
@@ -413,16 +418,17 @@ Components also expose `::part(...)` hooks, for example:
 
 - `account-shell::part(chrome|toolbar|layout|nav|main)`
 - `account-toolbar::part(toolbar|start|back|end|avatar|sign-out)`
-- `account-personal-info::part(form|field|actions|message)`
-- `account-signing-in::part(title|description|category|type|list|item|actions|message|empty)`
-- `account-device-activity::part(title|description|toolbar|list|item|details|actions|message|empty|badge)`
-- `account-applications::part(title|description|list|item|details|actions|message|empty)`
-- `account-groups::part(title|description|toolbar|list|item|message|empty)`
-- `account-linked-accounts::part(title|description|section|list|item|actions|message|empty|badge)`
-- `account-organizations::part(title|description|list|item|message|empty)`
-- `account-resources::part(title|description|tabs|list|item|actions|message|empty|badge)`
+- `account-personal-info::part(form|field|actions)` (field errors via `account-field::part(error)`)
+- `account-signing-in::part(title|description|category|type|list|item|actions|empty)`
+- `account-device-activity::part(title|description|toolbar|list|item|details|actions|empty|badge)`
+- `account-applications::part(title|description|list|item|details|actions|empty)`
+- `account-groups::part(title|description|toolbar|list|item|empty)`
+- `account-linked-accounts::part(title|description|section|list|item|actions|empty|badge)`
+- `account-organizations::part(title|description|list|item|empty)`
+- `account-resources::part(title|description|tabs|list|item|actions|empty|badge)`
 - `account-dialog::part(dialog|body|title|content|actions)`
-- `account-verifiable-credentials::part(title|description|list|item|actions|message|empty)`
+- `account-alert::part(alert|message|dismiss)`
+- `account-verifiable-credentials::part(title|description|list|item|actions|empty)`
 - `account-input::part(input)`
 - `account-save-button::part(button)`
 
@@ -431,5 +437,6 @@ Components also expose `::part(...)` hooks, for example:
 - `<account-input>` — form-associated; props: `name`, `type`, `value` / `.values`, `.options`, `required`, `readonly`, `disabled`, `placeholder`
 - `<account-field>` — label + slotted control (+ optional `help` / `error`)
 - `<account-save-button>` — `saving`, `label`, `saving-label`
+- `<account-alert>` — floating toast; props: `message`, `tone` (`success` | `error`); auto-dismisses after 8s and fires `dismiss`
 
 User-profile metadata is mapped to input props via `attributeToInputProps()` in `resources/js/user-profile.js` (kept out of the input component so inputs stay reusable).

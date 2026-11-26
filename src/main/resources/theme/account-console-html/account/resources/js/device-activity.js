@@ -483,7 +483,7 @@ export class DeviceActivity extends LitElement {
             </ul>
           `
         : html`<p class="empty" part="empty">${this.#t("signedInDevices")}</p>`}
-      ${renderMessage(this.message, this.messageTone)}
+      ${renderMessage(this, this.message, this.messageTone)}
     `;
   }
 }

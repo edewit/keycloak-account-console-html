@@ -12,21 +12,48 @@ export async function getPersonalInfo() {
 }
 
 /**
+ * @typedef {{ field: string, errorMessage: string, params?: unknown[] }} UserProfileFieldError
+ */
+
+/**
+ * Account REST failure, optionally with user-profile field errors.
+ */
+export class AccountApiError extends Error {
+  /**
+   * @param {string} message
+   * @param {{ status?: number, errors?: UserProfileFieldError[] }} [options]
+   */
+  constructor(message, { status, errors } = {}) {
+    super(message);
+    this.name = "AccountApiError";
+    this.status = status;
+    /** @type {UserProfileFieldError[] | undefined} */
+    this.errors = errors;
+  }
+}
+
+/**
  * @param {Record<string, unknown>} user
  */
 export async function savePersonalInfo(user) {
   const response = await accountFetch("/", { method: "POST", body: user });
   if (!response.ok) {
-    let detail = `HTTP ${response.status}`;
+    /** @type {UserProfileFieldError[] | undefined} */
+    let errors;
     try {
       const payload = await response.json();
-      if (payload?.errors) {
-        detail = JSON.stringify(payload.errors);
+      if (Array.isArray(payload?.errors)) {
+        errors = payload.errors;
       }
     } catch {
-      // ignore
+      // ignore non-JSON bodies
     }
-    throw new Error(`Failed to save personal info: ${detail}`);
+    throw new AccountApiError(
+      errors?.length
+        ? "Failed to save personal info due to validation errors"
+        : `Failed to save personal info (HTTP ${response.status})`,
+      { status: response.status, errors },
+    );
   }
 }
 

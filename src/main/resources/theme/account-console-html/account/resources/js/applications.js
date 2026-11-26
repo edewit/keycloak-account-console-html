@@ -559,7 +559,7 @@ export class Applications extends LitElement {
             </ul>
           `
         : html`<p class="empty" part="empty">${this.#t("applications")}</p>`}
-      ${renderMessage(this.message, this.messageTone)}
+      ${renderMessage(this, this.message, this.messageTone)}
     `;
   }
 }

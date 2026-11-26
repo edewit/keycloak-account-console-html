@@ -497,7 +497,7 @@ export class Resources extends LitElement {
               ? this.#t("notHaveAnyResource")
               : this.#t("noResourcesSharedWithYou")}
           </p>`}
-      ${renderMessage(this.message, this.messageTone || undefined)}
+      ${renderMessage(this, this.message, this.messageTone || undefined)}
       <account-resource-share-dialog
         .resource=${this.dialogResource}
         .open=${this.dialogKind === "share"}

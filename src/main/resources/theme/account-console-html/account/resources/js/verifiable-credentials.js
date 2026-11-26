@@ -353,7 +353,7 @@ export class VerifiableCredentials extends LitElement {
         : html`<p class="empty" part="empty">
             ${this.#t("noVerifiableCredentials")}
           </p>`}
-      ${renderMessage(this.message, this.messageTone || undefined)}
+      ${renderMessage(this, this.message, this.messageTone || undefined)}
     `;
   }
 }

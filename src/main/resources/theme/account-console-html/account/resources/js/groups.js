@@ -285,7 +285,7 @@ export class Groups extends LitElement {
             </ul>
           `
         : html`<p class="empty" part="empty">${this.#t("groups")}</p>`}
-      ${renderMessage(this.message, "error")}
+      ${renderMessage(this, this.message, "error")}
     `;
   }
 }

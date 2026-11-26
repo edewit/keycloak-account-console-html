@@ -356,7 +356,7 @@ export class LinkedAccounts extends LitElement {
       </slot>
       ${this.#renderSection("linkedLoginProviders", this.linked, true)}
       ${this.#renderSection("unlinkedLoginProviders", this.available, false)}
-      ${renderMessage(this.message, this.messageTone)}
+      ${renderMessage(this, this.message, this.messageTone)}
     `;
   }
 }

@@ -218,7 +218,7 @@ export class Organizations extends LitElement {
         : html`<p class="empty" part="empty">
             ${this.#t("emptyUserOrganizations")}
           </p>`}
-      ${renderMessage(this.message, "error")}
+      ${renderMessage(this, this.message, "error")}
     `;
   }
 }

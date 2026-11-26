@@ -1,4 +1,5 @@
 import { html, css, nothing } from "lit";
+import "./components/alert.js";
 
 /**
  * Shared helpers for account page Lit elements (emit, status chrome, message styles).
@@ -70,10 +71,6 @@ export const pageChromeStyles = css`
   .message[data-tone="error"] {
     color: var(--account-error-color, #b42318);
   }
-
-  .message[data-tone="success"] {
-    color: var(--account-success-color, #027a48);
-  }
 `;
 
 /**
@@ -93,18 +90,25 @@ export function renderLoadError(message) {
 }
 
 /**
- * Inline status message (empty when there is no text).
+ * Floating status alert (top-right). Clears `host.message` / `host.messageTone`
+ * on dismiss (manual or after 8s).
  *
+ * @param {{ message?: string, messageTone?: string }} host
  * @param {string | undefined | null} message
  * @param {string} [tone]
  */
-export function renderMessage(message, tone) {
+export function renderMessage(host, message, tone) {
   if (!message) {
     return nothing;
   }
   return html`
-    <p part="message" class="message" data-tone=${tone || nothing}>
-      ${message}
-    </p>
+    <account-alert
+      message=${message}
+      tone=${tone || nothing}
+      @dismiss=${() => {
+        host.message = "";
+        host.messageTone = "";
+      }}
+    ></account-alert>
   `;
 }
