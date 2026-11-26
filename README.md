@@ -24,6 +24,8 @@ Requires **Keycloak 26.8+**.
   - `account-linked-accounts` — federated IdP link / unlink
   - `account-organizations` — organization memberships
   - `account-resources` — UMA resources (my + shared with me)
+  - `account-resource-share-dialog` / `account-resource-edit-dialog` / `account-resource-requests-dialog`
+  - `account-dialog` — reusable native `<dialog>` shell
   - `account-verifiable-credentials` — OID4VCI issue / revoke
   - `account-field`, `account-input`, `account-save-button` — form primitives
 
@@ -307,7 +309,7 @@ Loads `/organizations` and lists memberships (name, alias, description, domains)
 
 ### Resources (`account-resources`)
 
-Tabs for **My resources** (`GET /resources`) and **Shared with me** (`GET /resources/shared-with-me`). Owned rows load pending permission requests and support **Share**, **Edit**, **Unshare**, and approve/deny request dialogs (`GET`/`PUT /resources/{id}/permissions`).
+Tabs for **My resources** (`GET /resources`) and **Shared with me** (`GET /resources/shared-with-me`). Owned rows load pending permission requests and open dedicated dialogs: `account-resource-share-dialog`, `account-resource-edit-dialog`, `account-resource-requests-dialog` (`GET`/`PUT /resources/{id}/permissions`).
 
 | Slot | Purpose |
 |------|---------|
@@ -373,7 +375,8 @@ Components also expose `::part(...)` hooks, for example:
 - `account-groups::part(title|description|toolbar|list|item|message|empty)`
 - `account-linked-accounts::part(title|description|section|list|item|actions|message|empty|badge)`
 - `account-organizations::part(title|description|list|item|message|empty)`
-- `account-resources::part(title|description|tabs|list|item|actions|dialog|message|empty|badge)`
+- `account-resources::part(title|description|tabs|list|item|actions|message|empty|badge)`
+- `account-dialog::part(dialog|body|title|content|actions)`
 - `account-verifiable-credentials::part(title|description|list|item|actions|message|empty)`
 - `account-input::part(input)`
 - `account-save-button::part(button)`

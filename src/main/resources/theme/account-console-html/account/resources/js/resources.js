@@ -13,49 +13,17 @@ import {
   renderLoading,
   renderMessage,
 } from "./page.js";
-
-/**
- * @param {any} resource
- */
-function resourceId(resource) {
-  return resource?._id ?? resource?.id ?? "";
-}
-
-/**
- * @param {unknown} scope
- * @returns {string}
- */
-function scopeName(scope) {
-  if (typeof scope === "string") {
-    return scope;
-  }
-  if (scope && typeof scope === "object" && "name" in scope) {
-    return /** @type {{ name?: string }} */ (scope).name ?? "";
-  }
-  return "";
-}
-
-/**
- * @param {unknown} scope
- * @returns {string}
- */
-function scopeLabel(scope) {
-  if (typeof scope === "string") {
-    return scope;
-  }
-  if (scope && typeof scope === "object") {
-    const s = /** @type {{ displayName?: string, name?: string }} */ (scope);
-    return s.displayName || s.name || "";
-  }
-  return "";
-}
+import "./resource-edit-dialog.js";
+import "./resource-requests-dialog.js";
+import "./resource-share-dialog.js";
+import { resourceId, scopeLabel } from "./resource-utils.js";
 
 /**
  * Resources / UMA page (mirrors account-ui Resources).
  *
  * Tabs: my resources (`GET /resources`) and shared with me
  * (`GET /resources/shared-with-me`). Owned rows support share / edit /
- * unshare and approve/deny permission requests.
+ * unshare and approve/deny via dedicated dialog components.
  *
  * Overridable slots: `title`, `description`.
  * Events (bubbles, composed): `load`, `error`, cancelable `share` /
@@ -63,7 +31,7 @@ function scopeLabel(scope) {
  * then `shared` / `unshared` / `permissions-updated`.
  *
  * Style via `--account-resources-*` or
- * ::part(title|description|tabs|list|item|actions|dialog|message|empty|badge).
+ * ::part(title|description|tabs|list|item|actions|message|empty|badge).
  */
 export class Resources extends LitElement {
   static properties = {
@@ -75,16 +43,10 @@ export class Resources extends LitElement {
     message: { state: true },
     /** @type {"" | "error" | "success"} */
     messageTone: { state: true },
-    /** @type {null | { kind: "share" | "edit" | "requests", resource: any, permissions?: any[] }} */
-    dialog: { state: true },
-    /** @type {string} */
-    shareUsername: { state: true },
-    /** @type {string[]} */
-    shareScopes: { state: true },
-    /** @type {Record<string, string[]>} */
-    editScopesByUser: { state: true },
-    dialogBusy: { state: true },
-    dialogError: { state: true },
+    /** @type {"" | "share" | "edit" | "requests"} */
+    dialogKind: { state: true },
+    /** @type {any | null} */
+    dialogResource: { state: true },
   };
 
   static styles = [
@@ -102,20 +64,6 @@ export class Resources extends LitElement {
           --account-button-padding,
           0.5rem 1rem
         );
-        /* Top-layer <dialog> does not inherit page colors reliably. */
-        --account-resources-dialog-bg: var(
-          --account-surface,
-          light-dark(#ffffff, #1b1b1b)
-        );
-        --account-resources-dialog-fg: var(
-          --account-fg,
-          light-dark(#1b1b1b, #f0f0f0)
-        );
-        --account-resources-backdrop: color-mix(
-          in srgb,
-          #000 45%,
-          transparent
-        );
 
         display: block;
         width: 100%;
@@ -130,10 +78,7 @@ export class Resources extends LitElement {
       }
 
       .tabs button,
-      .actions button,
-      .dialog-actions button,
-      .request-actions button,
-      .scope-list button.add-user {
+      .actions button {
         font: inherit;
         cursor: pointer;
         border: 1px solid var(--account-resources-border);
@@ -151,11 +96,6 @@ export class Resources extends LitElement {
       button.danger {
         border-color: var(--account-resources-error-color);
         color: var(--account-resources-error-color);
-      }
-
-      button.primary {
-        background: color-mix(in srgb, currentColor 10%, transparent);
-        font-weight: 600;
       }
 
       button:disabled {
@@ -255,118 +195,6 @@ export class Resources extends LitElement {
         color: var(--account-resources-muted-color);
       }
 
-      dialog {
-        border: 1px solid var(--account-resources-border);
-        border-radius: var(--account-resources-radius);
-        padding: 0;
-        max-width: min(32rem, calc(100vw - 2rem));
-        width: 100%;
-        background: var(--account-resources-dialog-bg);
-        color: var(--account-resources-dialog-fg);
-        color-scheme: light dark;
-      }
-
-      dialog::backdrop {
-        background: var(--account-resources-backdrop);
-      }
-
-      .dialog-body {
-        padding: 1.1rem 1.25rem 1.25rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-      }
-
-      .dialog-body h2 {
-        margin: 0;
-        font-size: 1.15rem;
-      }
-
-      .dialog-body p {
-        margin: 0;
-        color: var(--account-resources-muted-color);
-        font-size: 0.95rem;
-      }
-
-      .field {
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-      }
-
-      .field label {
-        font-size: 0.9rem;
-        font-weight: 600;
-      }
-
-      .field input[type="text"] {
-        font: inherit;
-        padding: 0.5rem 0.65rem;
-        border: 1px solid var(--account-resources-border);
-        border-radius: var(--account-resources-radius);
-        background: transparent;
-        color: inherit;
-      }
-
-      .scope-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-      }
-
-      .scope-list label {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        font-weight: 400;
-      }
-
-      .shared-with {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-      }
-
-      .shared-with li {
-        border: 1px solid var(--account-resources-border);
-        border-radius: var(--account-resources-radius);
-        padding: 0.75rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-
-      .shared-with .user {
-        font-weight: 600;
-      }
-
-      .shared-with .email {
-        color: var(--account-resources-muted-color);
-        font-size: 0.9rem;
-      }
-
-      .request-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
-      }
-
-      .dialog-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        justify-content: flex-end;
-      }
-
-      .dialog-error {
-        margin: 0;
-        color: var(--account-resources-error-color);
-        font-size: 0.9rem;
-      }
-
       @media (max-width: 40rem) {
         .header {
           display: none;
@@ -392,12 +220,8 @@ export class Resources extends LitElement {
     this.status = "loading";
     this.message = "";
     this.messageTone = "";
-    this.dialog = null;
-    this.shareUsername = "";
-    this.shareScopes = [];
-    this.editScopesByUser = {};
-    this.dialogBusy = false;
-    this.dialogError = "";
+    this.dialogKind = "";
+    this.dialogResource = null;
   }
 
   /** @returns {(key: string, params?: Record<string, string | number>) => string} */
@@ -408,20 +232,6 @@ export class Resources extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.#load();
-  }
-
-  updated(changed) {
-    if (changed.has("dialog")) {
-      const el = this.renderRoot?.querySelector("dialog");
-      if (!el) {
-        return;
-      }
-      if (this.dialog && !el.open) {
-        el.showModal();
-      } else if (!this.dialog && el.open) {
-        el.close();
-      }
-    }
   }
 
   /**
@@ -481,204 +291,39 @@ export class Resources extends LitElement {
     return client.name || client.clientId || "";
   }
 
-  /**
-   * @param {any} resource
-   * @returns {string[]}
-   */
-  #resourceScopeNames(resource) {
-    return (resource.scopes ?? []).map(scopeName).filter(Boolean);
-  }
-
   #closeDialog() {
-    this.dialog = null;
-    this.shareUsername = "";
-    this.shareScopes = [];
-    this.editScopesByUser = {};
-    this.dialogBusy = false;
-    this.dialogError = "";
+    this.dialogKind = "";
+    this.dialogResource = null;
   }
 
   /**
    * @param {any} resource
    * @param {"share" | "edit" | "requests"} kind
    */
-  async #openDialog(resource, kind) {
-    this.dialogError = "";
-    this.dialogBusy = kind !== "requests";
-    this.dialog = { kind, resource, permissions: [] };
-    this.shareUsername = "";
-    this.shareScopes = this.#resourceScopeNames(resource).slice(0, 1);
-    this.editScopesByUser = {};
-
-    if (kind === "requests") {
-      this.dialogBusy = false;
-      return;
-    }
-
-    try {
-      const permissions = await getPermissions(resourceId(resource));
-      const map = {};
-      for (const permission of permissions) {
-        map[permission.username] = (permission.scopes ?? [])
-          .map(scopeName)
-          .filter(Boolean);
-      }
-      this.editScopesByUser = map;
-      this.dialog = { kind, resource, permissions };
-      this.dialogBusy = false;
-    } catch (error) {
-      this.dialogBusy = false;
-      this.dialogError =
-        error instanceof Error ? error.message : String(error);
-      emitEvent(this, "error", {
-        phase: "load-permissions",
-        error,
-        message: this.dialogError,
-      });
-    }
+  #openDialog(resource, kind) {
+    this.dialogResource = resource;
+    this.dialogKind = kind;
   }
 
   /**
-   * @param {Event} event
+   * @param {CustomEvent} event
    */
-  #onDialogCancel(event) {
-    event.preventDefault();
+  #onDialogSuccess(event) {
+    const messageKey =
+      event.type === "permissions-updated" ? "updateSuccess" : "shareSuccess";
+    this.messageTone = "success";
+    this.message = this.#t(messageKey);
     this.#closeDialog();
+    this.#load();
   }
 
   /**
-   * @param {string} scope
-   * @param {boolean} checked
+   * @param {CustomEvent} event
    */
-  #toggleShareScope(scope, checked) {
-    if (checked) {
-      if (!this.shareScopes.includes(scope)) {
-        this.shareScopes = [...this.shareScopes, scope];
-      }
-    } else {
-      this.shareScopes = this.shareScopes.filter((s) => s !== scope);
-    }
-  }
-
-  /**
-   * @param {string} username
-   * @param {string} scope
-   * @param {boolean} checked
-   */
-  #toggleEditScope(username, scope, checked) {
-    const current = this.editScopesByUser[username] ?? [];
-    const next = checked
-      ? current.includes(scope)
-        ? current
-        : [...current, scope]
-      : current.filter((s) => s !== scope);
-    this.editScopesByUser = { ...this.editScopesByUser, [username]: next };
-  }
-
-  async #submitShare() {
-    const dialog = this.dialog;
-    if (!dialog || dialog.kind !== "share") {
-      return;
-    }
-    const username = this.shareUsername.trim();
-    const scopes = this.shareScopes;
-    if (!username) {
-      this.dialogError = this.#t("required");
-      return;
-    }
-    if (!scopes.length) {
-      this.dialogError = this.#t("selectPermission");
-      return;
-    }
-    const already = (dialog.permissions ?? []).some(
-      (p) => p.username === username || p.email === username,
-    );
-    if (already) {
-      this.dialogError = this.#t("resourceAlreadyShared");
-      return;
-    }
-    if (
-      !emitEvent(
-        this,
-        "share",
-        { resource: dialog.resource, username, scopes },
-        { cancelable: true },
-      )
-    ) {
-      return;
-    }
-    this.dialogBusy = true;
-    this.dialogError = "";
-    try {
-      await updatePermissions(resourceId(dialog.resource), [
-        { username, scopes },
-      ]);
-      this.messageTone = "success";
-      this.message = this.#t("shareSuccess");
-      emitEvent(this, "shared", {
-        resource: dialog.resource,
-        username,
-        scopes,
-      });
-      this.#closeDialog();
-      await this.#load();
-    } catch (error) {
-      this.dialogBusy = false;
-      this.dialogError =
-        error instanceof Error ? error.message : String(error);
-      emitEvent(this, "error", {
-        phase: "share",
-        error,
-        message: this.dialogError,
-      });
-    }
-  }
-
-  async #submitEdit() {
-    const dialog = this.dialog;
-    if (!dialog || dialog.kind !== "edit") {
-      return;
-    }
-    const permissions = (dialog.permissions ?? []).map((permission) => ({
-      username: permission.username,
-      scopes: this.editScopesByUser[permission.username] ?? [],
-    }));
-    if (
-      !emitEvent(
-        this,
-        "update-permissions",
-        { resource: dialog.resource, permissions },
-        { cancelable: true },
-      )
-    ) {
-      return;
-    }
-    this.dialogBusy = true;
-    this.dialogError = "";
-    try {
-      await Promise.all(
-        permissions.map((permission) =>
-          updatePermissions(resourceId(dialog.resource), [permission]),
-        ),
-      );
-      this.messageTone = "success";
-      this.message = this.#t("updateSuccess");
-      emitEvent(this, "permissions-updated", {
-        resource: dialog.resource,
-        permissions,
-      });
-      this.#closeDialog();
-      await this.#load();
-    } catch (error) {
-      this.dialogBusy = false;
-      this.dialogError =
-        error instanceof Error ? error.message : String(error);
-      emitEvent(this, "error", {
-        phase: "update-permissions",
-        error,
-        message: this.dialogError,
-      });
-    }
+  #onDialogError(event) {
+    const detail = event.detail ?? {};
+    this.messageTone = "error";
+    this.message = detail.message || String(detail.error ?? "Error");
   }
 
   /**
@@ -688,9 +333,7 @@ export class Resources extends LitElement {
     if (!confirm(this.#t("unShareAllConfirm"))) {
       return;
     }
-    if (
-      !emitEvent(this, "unshare", { resource }, { cancelable: true })
-    ) {
+    if (!emitEvent(this, "unshare", { resource }, { cancelable: true })) {
       return;
     }
     try {
@@ -715,62 +358,6 @@ export class Resources extends LitElement {
         phase: "unshare",
         error,
         message: this.message,
-      });
-    }
-  }
-
-  /**
-   * @param {any} shareRequest
-   * @param {boolean} approve
-   */
-  async #approveDeny(shareRequest, approve) {
-    const dialog = this.dialog;
-    if (!dialog || dialog.kind !== "requests") {
-      return;
-    }
-    const resource = dialog.resource;
-    const eventType = approve ? "approve-request" : "deny-request";
-    if (
-      !emitEvent(
-        this,
-        eventType,
-        { resource, request: shareRequest },
-        { cancelable: true },
-      )
-    ) {
-      return;
-    }
-    this.dialogBusy = true;
-    this.dialogError = "";
-    try {
-      const permissions = await getPermissions(resourceId(resource));
-      const existing = permissions.find(
-        (p) => p.username === shareRequest.username,
-      ) || { username: shareRequest.username, scopes: [] };
-      const currentScopes = (existing.scopes ?? [])
-        .map(scopeName)
-        .filter(Boolean);
-      const requestScopes = (shareRequest.scopes ?? [])
-        .map(scopeName)
-        .filter(Boolean);
-      const scopes = approve
-        ? [...new Set([...currentScopes, ...requestScopes])]
-        : currentScopes;
-      await updatePermissions(resourceId(resource), [
-        { username: shareRequest.username, scopes },
-      ]);
-      this.messageTone = "success";
-      this.message = this.#t("shareSuccess");
-      this.#closeDialog();
-      await this.#load();
-    } catch (error) {
-      this.dialogBusy = false;
-      this.dialogError =
-        error instanceof Error ? error.message : String(error);
-      emitEvent(this, "error", {
-        phase: eventType,
-        error,
-        message: this.dialogError,
       });
     }
   }
@@ -851,226 +438,6 @@ export class Resources extends LitElement {
     `;
   }
 
-  #renderShareDialog(resource, permissions) {
-    const available = this.#resourceScopeNames(resource);
-    const shared = permissions ?? [];
-    return html`
-      <h2>${this.#t("sharetheResource")}</h2>
-      <p>${resource.displayName || resource.name || ""}</p>
-      ${shared.length
-        ? html`
-            <div>
-              <strong>${this.#t("peopleSharingThisResource")}</strong>
-              <ul class="scopes" style="margin-top: 0.5rem">
-                ${shared.map(
-                  (p) => html`<li>${p.username || p.email || ""}</li>`,
-                )}
-              </ul>
-            </div>
-          `
-        : nothing}
-      <div class="field">
-        <label for="share-user">${this.#t("username")} / email</label>
-        <input
-          id="share-user"
-          type="text"
-          .value=${this.shareUsername}
-          ?disabled=${this.dialogBusy}
-          @input=${(e) => {
-            this.shareUsername = e.target.value;
-          }}
-        />
-      </div>
-      <div class="field">
-        <span>${this.#t("permission")}</span>
-        <div class="scope-list">
-          ${available.map(
-            (scope) => html`
-              <label>
-                <input
-                  type="checkbox"
-                  .checked=${this.shareScopes.includes(scope)}
-                  ?disabled=${this.dialogBusy}
-                  @change=${(e) =>
-                    this.#toggleShareScope(scope, e.target.checked)}
-                />
-                ${scope}
-              </label>
-            `,
-          )}
-        </div>
-      </div>
-      ${this.dialogError
-        ? html`<p class="dialog-error">${this.dialogError}</p>`
-        : nothing}
-      <div class="dialog-actions">
-        <button type="button" @click=${() => this.#closeDialog()}>
-          ${this.#t("doCancel")}
-        </button>
-        <button
-          type="button"
-          class="primary"
-          ?disabled=${this.dialogBusy}
-          @click=${() => this.#submitShare()}
-        >
-          ${this.#t("share")}
-        </button>
-      </div>
-    `;
-  }
-
-  #renderEditDialog(resource, permissions) {
-    const available = this.#resourceScopeNames(resource);
-    const list = permissions ?? [];
-    return html`
-      <h2>${this.#t("myPermissions")}</h2>
-      <p>${resource.displayName || resource.name || ""}</p>
-      ${list.length
-        ? html`
-            <ul class="shared-with">
-              ${list.map((permission) => {
-                const username = permission.username;
-                const selected = this.editScopesByUser[username] ?? [];
-                return html`
-                  <li>
-                    <div class="user">
-                      ${[permission.firstName, permission.lastName]
-                        .filter(Boolean)
-                        .join(" ") || username}
-                    </div>
-                    ${permission.email
-                      ? html`<div class="email">${permission.email}</div>`
-                      : nothing}
-                    <div class="scope-list">
-                      ${available.map(
-                        (scope) => html`
-                          <label>
-                            <input
-                              type="checkbox"
-                              .checked=${selected.includes(scope)}
-                              ?disabled=${this.dialogBusy}
-                              @change=${(e) =>
-                                this.#toggleEditScope(
-                                  username,
-                                  scope,
-                                  e.target.checked,
-                                )}
-                            />
-                            ${scope}
-                          </label>
-                        `,
-                      )}
-                    </div>
-                  </li>
-                `;
-              })}
-            </ul>
-          `
-        : html`<p>${this.#t("resourceIsNotBeingShared")}</p>`}
-      ${this.dialogError
-        ? html`<p class="dialog-error">${this.dialogError}</p>`
-        : nothing}
-      <div class="dialog-actions">
-        <button type="button" @click=${() => this.#closeDialog()}>
-          ${this.#t("doCancel")}
-        </button>
-        <button
-          type="button"
-          class="primary"
-          ?disabled=${this.dialogBusy || !list.length}
-          @click=${() => this.#submitEdit()}
-        >
-          ${this.#t("doSave")}
-        </button>
-      </div>
-    `;
-  }
-
-  #renderRequestsDialog(resource) {
-    const requests = resource.shareRequests ?? [];
-    return html`
-      <h2>${this.#t("permissionRequests")}</h2>
-      <p>${resource.displayName || resource.name || ""}</p>
-      ${requests.length
-        ? html`
-            <ul class="shared-with">
-              ${requests.map((request) => {
-                const name =
-                  [request.firstName, request.lastName]
-                    .filter(Boolean)
-                    .join(" ") || request.username;
-                return html`
-                  <li>
-                    <div class="user">${name}</div>
-                    ${request.email
-                      ? html`<div class="email">${request.email}</div>`
-                      : nothing}
-                    <ul class="scopes">
-                      ${(request.scopes ?? []).map(
-                        (scope) => html`<li>${scopeLabel(scope)}</li>`,
-                      )}
-                    </ul>
-                    <div class="request-actions">
-                      <button
-                        type="button"
-                        class="primary"
-                        ?disabled=${this.dialogBusy}
-                        @click=${() => this.#approveDeny(request, true)}
-                      >
-                        ${this.#t("approve")}
-                      </button>
-                      <button
-                        type="button"
-                        class="danger"
-                        ?disabled=${this.dialogBusy}
-                        @click=${() => this.#approveDeny(request, false)}
-                      >
-                        ${this.#t("doDeny")}
-                      </button>
-                    </div>
-                  </li>
-                `;
-              })}
-            </ul>
-          `
-        : html`<p>${this.#t("resourceNoPermissionsGrantingAccess")}</p>`}
-      ${this.dialogError
-        ? html`<p class="dialog-error">${this.dialogError}</p>`
-        : nothing}
-      <div class="dialog-actions">
-        <button type="button" @click=${() => this.#closeDialog()}>
-          ${this.#t("doCancel")}
-        </button>
-      </div>
-    `;
-  }
-
-  #renderDialog() {
-    if (!this.dialog) {
-      return nothing;
-    }
-    const { kind, resource, permissions } = this.dialog;
-    return html`
-      <dialog
-        part="dialog"
-        @cancel=${this.#onDialogCancel}
-        @close=${() => {
-          if (this.dialog) {
-            this.#closeDialog();
-          }
-        }}
-      >
-        <div class="dialog-body">
-          ${kind === "share"
-            ? this.#renderShareDialog(resource, permissions)
-            : kind === "edit"
-              ? this.#renderEditDialog(resource, permissions)
-              : this.#renderRequestsDialog(resource)}
-        </div>
-      </dialog>
-    `;
-  }
-
   render() {
     if (this.status === "loading" && !this.resources) {
       return renderLoading("Loading resources…");
@@ -1131,7 +498,28 @@ export class Resources extends LitElement {
               : this.#t("noResourcesSharedWithYou")}
           </p>`}
       ${renderMessage(this.message, this.messageTone || undefined)}
-      ${this.#renderDialog()}
+      <account-resource-share-dialog
+        .resource=${this.dialogResource}
+        .open=${this.dialogKind === "share"}
+        @close=${() => this.#closeDialog()}
+        @shared=${this.#onDialogSuccess}
+        @error=${this.#onDialogError}
+      ></account-resource-share-dialog>
+      <account-resource-edit-dialog
+        .resource=${this.dialogResource}
+        .open=${this.dialogKind === "edit"}
+        @close=${() => this.#closeDialog()}
+        @permissions-updated=${this.#onDialogSuccess}
+        @error=${this.#onDialogError}
+      ></account-resource-edit-dialog>
+      <account-resource-requests-dialog
+        .resource=${this.dialogResource}
+        .open=${this.dialogKind === "requests"}
+        @close=${() => this.#closeDialog()}
+        @shared=${this.#onDialogSuccess}
+        @permissions-updated=${this.#onDialogSuccess}
+        @error=${this.#onDialogError}
+      ></account-resource-requests-dialog>
     `;
   }
 }
