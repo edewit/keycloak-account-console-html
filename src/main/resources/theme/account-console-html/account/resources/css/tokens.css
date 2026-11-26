@@ -29,4 +29,7 @@
   --account-shell-gap: 2rem;
   --account-shell-padding: 2rem;
   --account-shell-nav-width: 16rem;
+
+  --account-toolbar-gap: 1rem;
+  --account-toolbar-avatar-size: 2.25rem;
 }

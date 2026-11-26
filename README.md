@@ -15,6 +15,7 @@ Requires **Keycloak 26.8+**.
 - Lit / `@lit/context` / `keycloak-js` vendored under `resources/js/vendor/` (no CDN) — works air-gapped; no third-party script hosts
 - Lit web components under `resources/js/`
   - `account-shell` — page chrome; loads messages and provides Lit context
+  - `account-toolbar` — back-to-app link, avatar, sign out (slotted / overridable)
   - `account-sidebar` — navigation
   - `account-personal-info` — profile form (user-profile metadata driven)
   - `account-signing-in` — credential types (password, OTP, passkeys, …)
@@ -115,6 +116,46 @@ In the Admin Console, set the realm **Account theme** to `account-console-html`.
 Authenticated reads/writes go through Account REST via `accountFetch` in `resources/js/account-client.js`.
 
 ## Extending components
+
+### Toolbar (`account-toolbar` via `account-shell`)
+
+Shown above the sidebar/main layout. Default pieces:
+
+- **Back link** — `referrer-url` / `referrer-name` props, else `?referrer=` + `?referrer_uri=` (stock account-ui), else the realm Admin Console
+- **Avatar** — initials from the access token (`given_name` / `family_name` / username)
+- **Sign out** — `keycloak.logout()` (cancelable `sign-out` event)
+
+Override from any page without touching JS. The shell only forwards slots you
+actually provide (empty forwarders would blank the toolbar defaults):
+
+```html
+<account-shell>
+  <!-- one piece -->
+  <a slot="back" href="https://app.example">Back to App</a>
+  <img slot="avatar" src="/me.png" alt="Ada" width="36" height="36" />
+  <button slot="sign-out" type="button" onclick="…">Log out</button>
+
+  <!-- or replace the whole bar -->
+  <header slot="toolbar">Custom toolbar</header>
+
+  <account-personal-info></account-personal-info>
+</account-shell>
+```
+
+| Slot | Purpose |
+|------|---------|
+| `toolbar` | Replace the entire toolbar |
+| `start` | Extra content before the back link |
+| `back` | Replace the back-to-console link |
+| `end` | Extra content before avatar / sign out |
+| `avatar` | Replace the avatar |
+| `sign-out` | Replace the sign-out control |
+
+| Event | When | Notes |
+|-------|------|--------|
+| `sign-out` | Before logout | Cancelable |
+| `signed-out` | Logout started | — |
+| `error` | Logout failure | `{ phase, error, message }` |
 
 ### Slots (`account-personal-info`)
 
@@ -367,7 +408,8 @@ Shared tokens live in `resource/css/tokens.css` (`--account-radius`, `--account-
 
 Components also expose `::part(...)` hooks, for example:
 
-- `account-shell::part(layout|nav|main)`
+- `account-shell::part(chrome|toolbar|layout|nav|main)`
+- `account-toolbar::part(toolbar|start|back|end|avatar|sign-out)`
 - `account-personal-info::part(form|field|actions|message)`
 - `account-signing-in::part(title|description|category|type|list|item|actions|message|empty)`
 - `account-device-activity::part(title|description|toolbar|list|item|details|actions|message|empty|badge)`
