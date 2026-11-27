@@ -74,17 +74,58 @@ Bump versions in `package.json`, run `npm install` / `pnpm install`, then `npm r
 
 **CSP:** with vendored modules there are no third-party hosts. `boot.js` still injects an inline import map, so a strict `script-src 'self'` without `'unsafe-inline'` (or a hash/nonce) will block that step — same constraint as much of Keycloak’s own UI. The CDN fallback needs network egress to `cdn.jsdelivr.net`.
 
+## Download a release
+
+Provider JAR on Maven Central:
+
+- **Coordinates:** `ch.nerdin.keycloak:account-console-html:1.0.0`
+- **JAR:** [account-console-html-1.0.0.jar](https://repo1.maven.org/maven2/ch/nerdin/keycloak/account-console-html/1.0.0/account-console-html-1.0.0.jar)
+- **Browse:** [central.sonatype.com](https://central.sonatype.com/artifact/ch.nerdin.keycloak/account-console-html)
+
+```bash
+curl -LO https://repo1.maven.org/maven2/ch/nerdin/keycloak/account-console-html/1.0.0/account-console-html-1.0.0.jar
+cp account-console-html-1.0.0.jar $KEYCLOAK_HOME/providers/
+$KEYCLOAK_HOME/bin/kc.sh build
+```
+
+Or as a Maven dependency:
+
+```xml
+<dependency>
+  <groupId>ch.nerdin.keycloak</groupId>
+  <artifactId>account-console-html</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
+In the Admin Console, set the realm **Account theme** to `account-console-html`.
+
 ## Production build & deploy
 
 ```bash
 npm run build
 # or, if vendor/ is already up to date:
 mvn clean package
-cp target/keycloak-account-console-html-*.jar $KEYCLOAK_HOME/providers/
+cp target/account-console-html-*.jar $KEYCLOAK_HOME/providers/
 $KEYCLOAK_HOME/bin/kc.sh build
 ```
 
-In the Admin Console, set the realm **Account theme** to `account-console-html`.
+### Publish to Maven Central
+
+Requires a Central Portal user token (`~/.m2/settings.xml` server id `central`) and
+a local GPG secret key matching the release profile `keyname` in `pom.xml`
+(`DEC99C4EC9FBE9414801855A6DD7814971246F5B`):
+
+```bash
+pnpm run vendor
+mvn -Prelease clean deploy
+```
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on pushes and pull requests to
+`main`: install deps with pnpm, `pnpm run build` (vendor + `mvn package`), and
+upload the provider JAR as a workflow artifact.
 
 ## Adding a page
 

@@ -52,9 +52,10 @@ function resolveProviderJar() {
     .readdirSync(targetDir)
     .filter(
       (f) =>
-        f.startsWith("keycloak-account-console-html-") &&
+        f.startsWith("account-console-html-") &&
         f.endsWith(".jar") &&
-        !f.endsWith("-sources.jar"),
+        !f.endsWith("-sources.jar") &&
+        !f.endsWith("-javadoc.jar"),
     )
     .sort()
     .at(-1);
@@ -81,7 +82,7 @@ function ensureProviderJar() {
   jar = resolveProviderJar();
   if (!jar) {
     throw new Error(
-      "Provider JAR still missing after mvn package. Expected target/keycloak-account-console-html-*.jar",
+      "Provider JAR still missing after mvn package. Expected target/account-console-html-*.jar",
     );
   }
   return jar;
