@@ -6,6 +6,7 @@ import { LitElement, html, css, nothing } from "lit";
  *   <account-input name="email" type="email" value="a@b.c" required></account-input>
  *   <account-input name="bio" type="textarea"></account-input>
  *   <account-input name="locale" type="select" .options=${["en","nl"]}></account-input>
+ *   <account-input name="locale" type="select" .options=${[{ value: "en", label: "English" }]}></account-input>
  *
  * Style via shared tokens / `--account-input-*` or ::part(input).
  */
@@ -18,7 +19,7 @@ export class AccountInput extends LitElement {
     value: { type: String },
     /** @type {string[]} */
     values: { attribute: false },
-    /** @type {string[]} */
+    /** @type {Array<string | { value: string, label: string }>} */
     options: { attribute: false },
     required: { type: Boolean, reflect: true },
     disabled: { type: Boolean, reflect: true },
@@ -154,6 +155,9 @@ export class AccountInput extends LitElement {
       options.length
     ) {
       const multiple = inputType === "multiselect";
+      const hasEmptyOption = options.some((option) =>
+        typeof option === "string" ? option === "" : option.value === "",
+      );
       return html`
         <select
           part="input"
@@ -165,17 +169,19 @@ export class AccountInput extends LitElement {
           @change=${this.#onInput}
         >
           ${
-            !this.required && !multiple
+            !this.required && !multiple && !hasEmptyOption
               ? html`<option value=""></option>`
               : nothing
           }
-          ${options.map(
-            (option) => html`
-              <option value=${option} ?selected=${values.has(option)}>
-                ${option}
+          ${options.map((option) => {
+            const value = typeof option === "string" ? option : option.value;
+            const label = typeof option === "string" ? option : option.label;
+            return html`
+              <option value=${value} ?selected=${values.has(value)}>
+                ${label}
               </option>
-            `,
-          )}
+            `;
+          })}
         </select>
       `;
     }

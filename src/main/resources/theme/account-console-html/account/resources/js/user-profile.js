@@ -93,6 +93,45 @@ function resolveErrorParam(t, value) {
 }
 
 /**
+ * Human-readable language name for a locale tag.
+ *
+ * @param {string} locale
+ * @returns {string}
+ */
+export function localeDisplayName(locale) {
+  try {
+    return (
+      new Intl.DisplayNames([locale], { type: "language" }).of(locale) ?? locale
+    );
+  } catch {
+    return locale;
+  }
+}
+
+/**
+ * Select options for the locale attribute (default + supported locales).
+ *
+ * @param {string[]} supportedLocales
+ * @param {(key: string, params?: Record<string, string | number>) => string} t
+ * @param {string} [currentLocale]
+ * @returns {{ value: string, label: string }[]}
+ */
+export function localeSelectOptions(supportedLocales, t, currentLocale) {
+  const locales = (supportedLocales ?? [])
+    .map((locale) => {
+      const key = `locale_${locale}`;
+      const translated = t(key);
+      return {
+        value: locale,
+        label: translated !== key ? translated : localeDisplayName(locale),
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label, currentLocale || undefined));
+
+  return [{ value: "", label: t("defaultLocale") }, ...locales];
+}
+
+/**
  * Map Keycloak user-profile validation errors to per-field messages.
  *
  * @param {Array<{ field?: string, errorMessage?: string, params?: unknown[] }> | undefined} errors

@@ -7,12 +7,14 @@
     <link rel="stylesheet" href="resource/css/tokens.css" />
     <script
       src="resource/js/boot.js"
-      data-modules="components/shell.js,personal-info.js"
+      data-modules="components/shell.js,personal-info.js,components/locale-field.js"
     ></script>
   </head>
   <body>
     <account-shell>
-      <account-personal-info></account-personal-info>
+      <account-personal-info>
+        <account-locale-field slot="attribute:locale"></account-locale-field>
+      </account-personal-info>
     </account-shell>
   </body>
 </html>

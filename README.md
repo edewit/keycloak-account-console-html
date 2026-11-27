@@ -28,6 +28,7 @@ Requires **Keycloak 26.8+**.
   - `account-resource-share-dialog` / `account-resource-edit-dialog` / `account-resource-requests-dialog`
   - `account-dialog` — reusable native `<dialog>` shell
   - `account-alert` — floating top-right status toast (auto-dismiss 8s)
+  - `account-locale-field` — locale dropdown (`/supportedLocales`) for personal-info slot
   - `account-verifiable-credentials` — OID4VCI issue / revoke
   - `account-field`, `account-input`, `account-save-button` — form primitives
 
@@ -174,6 +175,7 @@ Override a single profile field from HTML. Use `slot="attribute:<name>"` so the 
 ```html
 <account-shell>
   <account-personal-info>
+    <account-locale-field slot="attribute:locale"></account-locale-field>
     <div slot="attribute:department" class="field">
       <label for="dept">Department</label>
       <select name="attributes.department" id="dept">
@@ -186,6 +188,11 @@ Override a single profile field from HTML. Use `slot="attribute:<name>"` so the 
 ```
 
 After load, slotted native controls with a `name` are hydrated from the user. Listen to the `load` event if you need the raw user object.
+
+Use `<account-locale-field slot="attribute:locale">` for the locale dropdown
+(options from `GET /account/supportedLocales`, labels via `locale_<tag>` /
+`Intl.DisplayNames`). Changing locale on save reloads the page so theme messages
+pick up the new language.
 
 ### Events (`account-personal-info`)
 
@@ -434,9 +441,10 @@ Components also expose `::part(...)` hooks, for example:
 
 ### Primitives
 
-- `<account-input>` — form-associated; props: `name`, `type`, `value` / `.values`, `.options`, `required`, `readonly`, `disabled`, `placeholder`
+- `<account-input>` — form-associated; props: `name`, `type`, `value` / `.values`, `.options` (`string` or `{ value, label }`), `required`, `readonly`, `disabled`, `placeholder`
 - `<account-field>` — label + slotted control (+ optional `help` / `error`)
 - `<account-save-button>` — `saving`, `label`, `saving-label`
 - `<account-alert>` — floating toast; props: `message`, `tone` (`success` | `error`); auto-dismisses after 8s and fires `dismiss`
+- `<account-locale-field>` — locale select for `slot="attribute:locale"` on personal-info
 
 User-profile metadata is mapped to input props via `attributeToInputProps()` in `resources/js/user-profile.js` (kept out of the input component so inputs stay reusable).

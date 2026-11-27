@@ -1,5 +1,10 @@
 import { LitElement, html, css, nothing } from "lit";
-import { AccountApiError, getPersonalInfo, savePersonalInfo } from "./api.js";
+import {
+  AccountApiError,
+  getKeycloak,
+  getPersonalInfo,
+  savePersonalInfo,
+} from "./api.js";
 import { consumeMessages } from "./i18n.js";
 import {
   emitEvent,
@@ -30,6 +35,7 @@ import "./components/field.js";
  *
  *   <account-personal-info>
  *     <h1 slot="title">My profile</h1>
+ *     <account-locale-field slot="attribute:locale"></account-locale-field>
  *     <div slot="attribute:department" class="field">
  *       <label for="dept">Department</label>
  *       <select name="attributes.department" id="dept">
@@ -254,9 +260,26 @@ export class PersonalInfo extends LitElement {
     this.message = "";
     this.messageTone = "";
     this.fieldErrors = {};
+    const localeBefore = this.#valueOf("locale");
     try {
       await savePersonalInfo(payload);
+      try {
+        const keycloak = await getKeycloak();
+        await keycloak.updateToken();
+      } catch {
+        // Token refresh is best-effort; save already succeeded.
+      }
       this.user = await getPersonalInfo();
+      const localeAfter = this.#valueOf("locale");
+      if (localeAfter !== localeBefore) {
+        window.dispatchEvent(
+          new CustomEvent("languageChanged", {
+            detail: { language: localeAfter },
+          }),
+        );
+        location.reload();
+        return;
+      }
       this.status = "ready";
       this.messageTone = "success";
       this.message = this.#t("accountUpdatedMessage");

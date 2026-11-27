@@ -33,6 +33,18 @@ export class AccountApiError extends Error {
 }
 
 /**
+ * Active realm locales for the locale attribute dropdown (Account REST `/supportedLocales`).
+ * @returns {Promise<string[]>}
+ */
+export async function getSupportedLocales() {
+  const response = await accountFetch("/supportedLocales");
+  if (!response.ok) {
+    throw new Error(`Failed to load supported locales (${response.status})`);
+  }
+  return response.json();
+}
+
+/**
  * @param {Record<string, unknown>} user
  */
 export async function savePersonalInfo(user) {
