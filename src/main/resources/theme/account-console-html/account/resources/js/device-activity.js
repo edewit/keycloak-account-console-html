@@ -9,6 +9,7 @@ import {
   renderLoading,
   renderMessage,
 } from "./page.js";
+import "./components/button.js";
 
 /**
  * @param {number} epochSeconds
@@ -158,27 +159,6 @@ export class DeviceActivity extends LitElement {
       flex-wrap: wrap;
       gap: 0.5rem;
       align-items: center;
-    }
-
-    button {
-      font: inherit;
-      cursor: pointer;
-      border: 1px solid var(--account-device-border);
-      border-radius: var(--account-device-radius);
-      padding: var(--account-device-button-padding);
-      background: transparent;
-      color: inherit;
-    }
-
-    button.primary {
-      border-color: transparent;
-      background: var(--account-device-button-bg);
-      color: var(--account-device-button-fg);
-    }
-
-    button.danger {
-      border-color: var(--account-device-error-color);
-      color: var(--account-device-error-color);
     }
 
     .empty {
@@ -405,14 +385,13 @@ export class DeviceActivity extends LitElement {
           ${!session.current
             ? html`
                 <div class="actions" part="actions">
-                  <button
-                    class="danger"
-                    type="button"
+                  <account-button
+                    variant="danger"
                     ?disabled=${this.status === "saving"}
                     @click=${() => this.#signOutSession(session, device)}
                   >
                     ${this.#t("signOut")}
-                  </button>
+                  </account-button>
                 </div>
               `
             : nothing}
@@ -455,23 +434,21 @@ export class DeviceActivity extends LitElement {
       </slot>
       <slot name="actions">
         <div class="toolbar" part="toolbar">
-          <button
-            type="button"
+          <account-button
             ?disabled=${this.status === "loading" || this.status === "saving"}
             @click=${() => this.#refresh()}
           >
             ${this.#t("refreshPage")}
-          </button>
+          </account-button>
           ${this.#hasMultipleSessions
             ? html`
-                <button
-                  class="danger"
-                  type="button"
+                <account-button
+                  variant="danger"
                   ?disabled=${this.status === "saving"}
                   @click=${() => this.#signOutAll()}
                 >
                   ${this.#t("signOutAllDevices")}
-                </button>
+                </account-button>
               `
             : nothing}
         </div>

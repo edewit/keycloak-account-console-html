@@ -164,31 +164,6 @@ export const resourceDialogStyles = css`
     gap: 0.4rem;
   }
 
-  button {
-    font: inherit;
-    cursor: pointer;
-    border: 1px solid var(--account-resource-dialog-border);
-    border-radius: var(--account-resource-dialog-radius);
-    padding: var(--account-resource-dialog-button-padding);
-    background: transparent;
-    color: inherit;
-  }
-
-  button.primary {
-    background: color-mix(in srgb, currentColor 10%, transparent);
-    font-weight: 600;
-  }
-
-  button.danger {
-    border-color: var(--account-resource-dialog-error);
-    color: var(--account-resource-dialog-error);
-  }
-
-  button:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-
   .error {
     margin: 0;
     color: var(--account-resource-dialog-error);

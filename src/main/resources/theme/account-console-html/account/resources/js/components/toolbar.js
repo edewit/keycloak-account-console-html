@@ -2,6 +2,7 @@ import { LitElement, html, css, nothing } from "lit";
 import { getEnvironment, getKeycloak } from "../account-client.js";
 import { consumeMessages } from "../i18n.js";
 import { emitEvent, label } from "../page.js";
+import "./button.js";
 
 /**
  * @param {Record<string, unknown> | undefined} token
@@ -151,8 +152,7 @@ export class AccountToolbar extends LitElement {
       margin-inline-start: auto;
     }
 
-    a.back,
-    button.sign-out {
+    a.back {
       font: inherit;
       color: inherit;
       text-decoration: none;
@@ -163,9 +163,13 @@ export class AccountToolbar extends LitElement {
       cursor: pointer;
     }
 
-    a.back:hover,
-    button.sign-out:hover {
+    a.back:hover {
       background: color-mix(in srgb, currentColor 6%, transparent);
+    }
+
+    account-button.sign-out {
+      --account-button-radius: var(--account-toolbar-radius);
+      --account-button-padding-local: var(--account-toolbar-button-padding);
     }
 
     .avatar {
@@ -293,14 +297,13 @@ export class AccountToolbar extends LitElement {
         <div class="end" part="end">
           <slot name="end"></slot>
           <slot name="sign-out">
-            <button
-              type="button"
+            <account-button
               class="sign-out"
-              part="sign-out"
+              exportparts="button:sign-out"
               @click=${() => this.#signOut()}
             >
               ${this.#t("doSignOut")}
-            </button>
+            </account-button>
           </slot>
           <slot name="avatar">
             <span

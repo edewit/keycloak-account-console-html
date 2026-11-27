@@ -12,6 +12,7 @@ import {
   renderLoading,
   renderMessage,
 } from "./page.js";
+import "./components/button.js";
 
 /**
  * @param {number | string | undefined | null} value
@@ -132,21 +133,6 @@ export class VerifiableCredentials extends LitElement {
         flex-wrap: wrap;
         gap: 0.5rem;
         justify-content: flex-end;
-      }
-
-      button {
-        font: inherit;
-        cursor: pointer;
-        border: 1px solid var(--account-vc-border);
-        border-radius: var(--account-vc-radius);
-        padding: var(--account-vc-button-padding);
-        background: transparent;
-        color: inherit;
-      }
-
-      button.danger {
-        border-color: var(--account-vc-error-color);
-        color: var(--account-vc-error-color);
       }
 
       .empty {
@@ -299,18 +285,17 @@ export class VerifiableCredentials extends LitElement {
           ${formatDate(credential.updatedDate, this.#locale)}
         </div>
         <div class="actions" part="actions">
-          <button type="button" @click=${() => this.#issue(credential)}>
+          <account-button @click=${() => this.#issue(credential)}>
             ${this.#t("issueToWallet")}
-          </button>
+          </account-button>
           ${this.canManage
             ? html`
-                <button
-                  type="button"
-                  class="danger"
+                <account-button
+                  variant="danger"
                   @click=${() => this.#revoke(credential)}
                 >
                   ${this.#t("doRevoke")}
-                </button>
+                </account-button>
               `
             : nothing}
         </div>

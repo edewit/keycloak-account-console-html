@@ -13,6 +13,7 @@ import {
   renderLoading,
   renderMessage,
 } from "./page.js";
+import "./components/button.js";
 
 /**
  * Linked accounts page (mirrors account-ui LinkedAccounts).
@@ -122,21 +123,6 @@ export class LinkedAccounts extends LitElement {
         flex-wrap: wrap;
         gap: 0.5rem;
         align-items: center;
-      }
-
-      button {
-        font: inherit;
-        cursor: pointer;
-        border: 1px solid var(--account-linked-border);
-        border-radius: var(--account-linked-radius);
-        padding: var(--account-linked-button-padding);
-        background: transparent;
-        color: inherit;
-      }
-
-      button.danger {
-        border-color: var(--account-linked-error-color);
-        color: var(--account-linked-error-color);
       }
 
       .empty {
@@ -292,23 +278,21 @@ export class LinkedAccounts extends LitElement {
         <div class="actions" part="actions">
           ${isLinked
             ? html`
-                <button
-                  class="danger"
-                  type="button"
+                <account-button
+                  variant="danger"
                   ?disabled=${this.status === "saving"}
                   @click=${() => this.#unlink(account)}
                 >
                   ${this.#t("unLink")}
-                </button>
+                </account-button>
               `
             : html`
-                <button
-                  type="button"
+                <account-button
                   ?disabled=${this.status === "saving"}
                   @click=${() => this.#link(account)}
                 >
                   ${this.#t("link")}
-                </button>
+                </account-button>
               `}
         </div>
       </li>

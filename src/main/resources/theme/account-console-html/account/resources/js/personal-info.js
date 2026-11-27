@@ -1,6 +1,7 @@
 import { LitElement, html, css, nothing } from "lit";
 import {
   AccountApiError,
+  getEnvironment,
   getKeycloak,
   getPersonalInfo,
   savePersonalInfo,
@@ -21,8 +22,17 @@ import {
   userProfileFieldErrors,
 } from "./user-profile.js";
 import "./components/save-button.js";
+import "./components/button.js";
 import "./components/input.js";
 import "./components/field.js";
+
+/**
+ * @param {unknown} value
+ * @returns {any}
+ */
+function cloneUser(value) {
+  return value == null ? value : JSON.parse(JSON.stringify(value));
+}
 
 /**
  * Personal info form driven by Keycloak user profile metadata.
@@ -43,16 +53,16 @@ import "./components/field.js";
  *         <option value="product">Product</option>
  *       </select>
  *     </div>
- *     <div slot="field" class="field">
- *       <label for="nickname">Nickname</label>
- *       <input id="nickname" name="nickname" />
- *     </div>
  *   </account-personal-info>
  *
- * Events (bubbles, composed): `load`, cancelable `save`, `saved`, `error`.
+ * When enabled by realm features: Update email (UPDATE_EMAIL), Delete account
+ * (`delete_account`), and Cancel resets to the last loaded/saved values.
+ *
+ * Events (bubbles, composed): `load`, cancelable `save` / `cancel` /
+ * `update-email` / `delete-account`, `saved`, `error`.
  *
  * Style via shared tokens / `--account-personal-*` or
- * ::part(form|field|label|input|actions|message).
+ * ::part(form|field|label|input|actions|update-email|delete-account|message).
  */
 export class PersonalInfo extends LitElement {
   static properties = {
@@ -64,6 +74,8 @@ export class PersonalInfo extends LitElement {
     messageTone: { state: true },
     /** @type {Record<string, string>} */
     fieldErrors: { state: true },
+    /** @type {Record<string, boolean>} */
+    features: { state: true },
   };
 
   static styles = [
@@ -101,13 +113,50 @@ export class PersonalInfo extends LitElement {
 
       .actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 0.75rem;
         align-items: center;
+      }
+
+      .update-email {
+        align-self: flex-start;
+        margin-top: -0.5rem;
+      }
+
+      .delete-account {
+        margin-top: 0.5rem;
+        border: 1px solid var(--account-border-color, currentColor);
+        border-radius: var(--account-radius, 0.5rem);
+        padding: 0.75rem 1rem;
+      }
+
+      .delete-account summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .delete-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+      }
+
+      .delete-body p {
+        margin: 0;
+        color: var(--account-muted-color, currentColor);
+      }
+
+      .delete-body account-button {
+        align-self: flex-start;
       }
     `,
   ];
 
   #i18n = consumeMessages(this);
+
+  /** @type {Record<string, unknown> | undefined} */
+  #snapshot;
 
   constructor() {
     super();
@@ -115,6 +164,7 @@ export class PersonalInfo extends LitElement {
     this.message = "";
     this.messageTone = "";
     this.fieldErrors = {};
+    this.features = {};
   }
 
   /** @returns {(key: string, params?: Record<string, string | number>) => string} */
@@ -127,13 +177,27 @@ export class PersonalInfo extends LitElement {
     this.#load();
   }
 
+  /**
+   * @param {Record<string, unknown> | undefined} user
+   */
+  #remember(user) {
+    this.#snapshot = cloneUser(user);
+  }
+
   async #load() {
     this.status = "loading";
     this.message = "";
     this.messageTone = "";
     this.fieldErrors = {};
     try {
-      this.user = await getPersonalInfo();
+      const [user, env] = await Promise.all([
+        getPersonalInfo(),
+        getEnvironment(),
+      ]);
+      this.user = user;
+      this.features =
+        env?.features && typeof env.features === "object" ? env.features : {};
+      this.#remember(this.user);
       if (!this.#attributes().length) {
         throw new Error("User profile metadata is not available");
       }
@@ -241,6 +305,77 @@ export class PersonalInfo extends LitElement {
     this.user = user;
   }
 
+  #onCancel() {
+    if (!this.#snapshot || this.status === "saving") {
+      return;
+    }
+    this.user = cloneUser(this.#snapshot);
+    this.fieldErrors = {};
+    this.message = "";
+    this.messageTone = "";
+    this.status = "ready";
+    emitEvent(this, "cancel", this.user);
+    this.updateComplete.then(() => this.#hydrateSlottedFields());
+  }
+
+  /**
+   * @param {any} attribute
+   */
+  #canUpdateEmail(attribute) {
+    if (attribute?.name !== "email") {
+      return false;
+    }
+    const features = this.features ?? {};
+    const annotations = attribute.annotations ?? {};
+    return (
+      Boolean(features.updateEmailFeatureEnabled) &&
+      Boolean(features.updateEmailActionEnabled) &&
+      Boolean(annotations["kc.required.action.supported"]) &&
+      (!features.isRegistrationEmailAsUsername ||
+        Boolean(features.isEditUserNameAllowed))
+    );
+  }
+
+  async #updateEmail() {
+    if (
+      !emitEvent(this, "update-email", {}, { cancelable: true })
+    ) {
+      return;
+    }
+    try {
+      const keycloak = await getKeycloak();
+      await keycloak.login({ action: "UPDATE_EMAIL" });
+    } catch (error) {
+      this.messageTone = "error";
+      this.message = error instanceof Error ? error.message : String(error);
+      emitEvent(this, "error", {
+        phase: "update-email",
+        error,
+        message: this.message,
+      });
+    }
+  }
+
+  async #deleteAccount() {
+    if (
+      !emitEvent(this, "delete-account", {}, { cancelable: true })
+    ) {
+      return;
+    }
+    try {
+      const keycloak = await getKeycloak();
+      await keycloak.login({ action: "delete_account" });
+    } catch (error) {
+      this.messageTone = "error";
+      this.message = error instanceof Error ? error.message : String(error);
+      emitEvent(this, "error", {
+        phase: "delete-account",
+        error,
+        message: this.message,
+      });
+    }
+  }
+
   /**
    * @param {Event} event
    */
@@ -270,6 +405,7 @@ export class PersonalInfo extends LitElement {
         // Token refresh is best-effort; save already succeeded.
       }
       this.user = await getPersonalInfo();
+      this.#remember(this.user);
       const localeAfter = this.#valueOf("locale");
       if (localeAfter !== localeBefore) {
         window.dispatchEvent(
@@ -311,7 +447,7 @@ export class PersonalInfo extends LitElement {
    * @param {any} attribute
    */
   #renderField(attribute) {
-    const props = attributeToInputProps(attribute);
+    const props = attributeToInputProps(attribute, this.#t);
     const fieldError = this.fieldErrors[props.name] ?? "";
     const defaultField = html`
       <account-field
@@ -334,6 +470,19 @@ export class PersonalInfo extends LitElement {
           ?disabled=${this.status === "saving"}
         ></account-input>
       </account-field>
+      ${this.#canUpdateEmail(attribute)
+        ? html`
+            <account-button
+              class="update-email"
+              variant="link"
+              exportparts="button:update-email"
+              ?disabled=${this.status === "saving"}
+              @click=${() => this.#updateEmail()}
+            >
+              ${this.#t("updateEmail")}
+            </account-button>
+          `
+        : nothing}
     `;
     // Prefer `attribute:<name>` so overrides never collide with title/actions/…
     // Nested bare-name slot keeps older `slot="email"` overrides working.
@@ -341,6 +490,28 @@ export class PersonalInfo extends LitElement {
       <slot name=${attributeSlotName(props.name)}>
         <slot name=${props.name}>${defaultField}</slot>
       </slot>
+    `;
+  }
+
+  #renderDeleteAccount() {
+    if (!this.features?.deleteAccountAllowed) {
+      return nothing;
+    }
+    return html`
+      <details class="delete-account" part="delete-account">
+        <summary>${this.#t("deleteAccount")}</summary>
+        <div class="delete-body">
+          <p>${this.#t("deleteAccountWarning")}</p>
+          <account-button
+            variant="danger"
+            filled
+            ?disabled=${this.status === "saving"}
+            @click=${() => this.#deleteAccount()}
+          >
+            ${this.#t("delete")}
+          </account-button>
+        </div>
+      </details>
     `;
   }
 
@@ -377,9 +548,18 @@ export class PersonalInfo extends LitElement {
                     label=${this.#t("save")}
                     ?saving=${this.status === "saving"}
                   ></account-save-button>
+                  <account-button
+                    variant="link"
+                    exportparts="button:cancel"
+                    ?disabled=${this.status === "saving"}
+                    @click=${() => this.#onCancel()}
+                  >
+                    ${this.#t("cancel")}
+                  </account-button>
                 </div>
               </slot>
             `}
+        ${this.#renderDeleteAccount()}
         ${renderMessage(this, this.message, this.messageTone)}
       </form>
     `;

@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { getPermissions, updatePermissions } from "./api.js";
 import "./components/dialog.js";
+import "./components/button.js";
 import { consumeMessages } from "./i18n.js";
 import { emitEvent } from "./page.js";
 import {
@@ -146,22 +147,20 @@ export class ResourceRequestsDialog extends LitElement {
                         )}
                       </ul>
                       <div class="request-actions">
-                        <button
-                          type="button"
-                          class="primary"
+                        <account-button
+                          variant="primary"
                           ?disabled=${this.busy}
                           @click=${() => this.#approveDeny(request, true)}
                         >
                           ${this.#t("approve")}
-                        </button>
-                        <button
-                          type="button"
-                          class="danger"
+                        </account-button>
+                        <account-button
+                          variant="danger"
                           ?disabled=${this.busy}
                           @click=${() => this.#approveDeny(request, false)}
                         >
                           ${this.#t("doDeny")}
-                        </button>
+                        </account-button>
                       </div>
                     </li>
                   `;
@@ -172,9 +171,9 @@ export class ResourceRequestsDialog extends LitElement {
               ${this.#t("resourceNoPermissionsGrantingAccess")}
             </p>`}
         ${this.error ? html`<p class="error">${this.error}</p>` : nothing}
-        <button type="button" slot="actions" @click=${() => this.#close()}>
+        <account-button slot="actions" @click=${() => this.#close()}>
           ${this.#t("doCancel")}
-        </button>
+        </account-button>
       </account-dialog>
     `;
   }

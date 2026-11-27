@@ -14,6 +14,7 @@ import {
   renderLoading,
   renderMessage,
 } from "./page.js";
+import "./components/button.js";
 
 /**
  * @param {number} epochMs
@@ -173,21 +174,6 @@ export class Applications extends LitElement {
       flex-wrap: wrap;
       gap: 0.5rem;
       align-items: center;
-    }
-
-    button.action {
-      font: inherit;
-      cursor: pointer;
-      border: 1px solid var(--account-apps-border);
-      border-radius: var(--account-apps-radius);
-      padding: var(--account-apps-button-padding);
-      background: transparent;
-      color: inherit;
-    }
-
-    button.danger {
-      border-color: var(--account-apps-error-color);
-      color: var(--account-apps-error-color);
     }
 
     .empty {
@@ -461,14 +447,13 @@ export class Applications extends LitElement {
         ${consent || app.offlineAccess
           ? html`
               <div class="actions" part="actions">
-                <button
-                  class="action danger"
-                  type="button"
+                <account-button
+                  variant="danger"
                   ?disabled=${this.status === "saving"}
                   @click=${() => this.#removeConsent(app)}
                 >
                   ${this.#t("removeAccess")}
-                </button>
+                </account-button>
               </div>
               <p class="info">${this.#t("infoMessage")}</p>
             `
@@ -515,14 +500,13 @@ export class Applications extends LitElement {
           ${canEndSession
             ? html`
                 <div class="actions" part="actions">
-                  <button
-                    class="action danger"
-                    type="button"
+                  <account-button
+                    variant="danger"
                     ?disabled=${this.status === "saving"}
                     @click=${() => this.#endSession(app)}
                   >
                     ${this.#t("endApplicationSession")}
-                  </button>
+                  </account-button>
                 </div>
               `
             : nothing}

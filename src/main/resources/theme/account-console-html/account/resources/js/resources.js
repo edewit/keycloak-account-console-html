@@ -13,6 +13,7 @@ import {
   renderLoading,
   renderMessage,
 } from "./page.js";
+import "./components/button.js";
 import "./resource-edit-dialog.js";
 import "./resource-requests-dialog.js";
 import "./resource-share-dialog.js";
@@ -77,8 +78,7 @@ export class Resources extends LitElement {
         margin: 0 0 var(--account-gap);
       }
 
-      .tabs button,
-      .actions button {
+      .tabs button {
         font: inherit;
         cursor: pointer;
         border: 1px solid var(--account-resources-border);
@@ -91,16 +91,6 @@ export class Resources extends LitElement {
       .tabs button[aria-selected="true"] {
         background: color-mix(in srgb, currentColor 8%, transparent);
         font-weight: 600;
-      }
-
-      button.danger {
-        border-color: var(--account-resources-error-color);
-        color: var(--account-resources-error-color);
-      }
-
-      button:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
       }
 
       .list {
@@ -412,25 +402,22 @@ export class Resources extends LitElement {
         <div class="actions" part="actions">
           ${owned
             ? html`
-                <button
-                  type="button"
+                <account-button
                   @click=${() => this.#openDialog(resource, "share")}
                 >
                   ${this.#t("share")}
-                </button>
-                <button
-                  type="button"
+                </account-button>
+                <account-button
                   @click=${() => this.#openDialog(resource, "edit")}
                 >
                   ${this.#t("edit")}
-                </button>
-                <button
-                  type="button"
-                  class="danger"
+                </account-button>
+                <account-button
+                  variant="danger"
                   @click=${() => this.#unshareAll(resource)}
                 >
                   ${this.#t("unShare")}
-                </button>
+                </account-button>
               `
             : nothing}
         </div>

@@ -30,6 +30,7 @@ Requires **Keycloak 26.8+**.
   - `account-alert` — floating top-right status toast (auto-dismiss 8s)
   - `account-locale-field` — locale dropdown (`/supportedLocales`) for personal-info slot
   - `account-verifiable-credentials` — OID4VCI issue / revoke
+  - `account-button` — shared button (`primary` / `secondary` / `danger` / `link`)
   - `account-field`, `account-input`, `account-save-button` — form primitives
 
 ## Local development (live HTML)
@@ -203,11 +204,19 @@ All bubble and are composed.
 | `load` | User profile loaded | `detail` is the user |
 | `save` | Before POST | Cancelable; `detail` is `{ user, payload }` |
 | `saved` | After successful save | `detail` is the refreshed user |
+| `cancel` | Cancel resets the form | `detail` is the restored user |
+| `update-email` | Before `UPDATE_EMAIL` login action | Cancelable |
+| `delete-account` | Before `delete_account` login action | Cancelable |
 | `error` | Load or save failure | `detail` is `{ phase, error, message, fieldErrors? }` |
 
 Validation errors from save are shown on the matching `<account-field>` (translated
 `errorMessage` keys) and a general `accountUpdatedError` toast; `fieldErrors` is
 a `Record<fieldName, message>` in the `error` event detail.
+
+Field labels use theme messages (`${email}` → `t("email")`). Cancel restores the
+last loaded/saved values. **Update email** appears on the email field when the
+UPDATE_EMAIL feature/action flags allow it. **Delete account** is shown when
+`features.deleteAccountAllowed` is true.
 
 ### i18n (Lit context)
 
@@ -425,7 +434,7 @@ Components also expose `::part(...)` hooks, for example:
 
 - `account-shell::part(chrome|toolbar|layout|nav|main)`
 - `account-toolbar::part(toolbar|start|back|end|avatar|sign-out)`
-- `account-personal-info::part(form|field|actions)` (field errors via `account-field::part(error)`)
+- `account-personal-info::part(form|field|actions|cancel|update-email|delete-account)` (field errors via `account-field::part(error)`)
 - `account-signing-in::part(title|description|category|type|list|item|actions|empty)`
 - `account-device-activity::part(title|description|toolbar|list|item|details|actions|empty|badge)`
 - `account-applications::part(title|description|list|item|details|actions|empty)`
@@ -437,13 +446,15 @@ Components also expose `::part(...)` hooks, for example:
 - `account-alert::part(alert|message|dismiss)`
 - `account-verifiable-credentials::part(title|description|list|item|actions|empty)`
 - `account-input::part(input)`
-- `account-save-button::part(button)`
+- `account-button::part(button)`
+- `account-save-button` (wraps `account-button`)
 
 ### Primitives
 
+- `<account-button>` — `variant` (`primary` | `secondary` | `danger` | `link`), `filled` (solid danger), `type`, `disabled`; slotted label
 - `<account-input>` — form-associated; props: `name`, `type`, `value` / `.values`, `.options` (`string` or `{ value, label }`), `required`, `readonly`, `disabled`, `placeholder`
 - `<account-field>` — label + slotted control (+ optional `help` / `error`)
-- `<account-save-button>` — `saving`, `label`, `saving-label`
+- `<account-save-button>` — `saving`, `label`, `saving-label` (uses `account-button`)
 - `<account-alert>` — floating toast; props: `message`, `tone` (`success` | `error`); auto-dismisses after 8s and fires `dismiss`
 - `<account-locale-field>` — locale select for `slot="attribute:locale"` on personal-info
 

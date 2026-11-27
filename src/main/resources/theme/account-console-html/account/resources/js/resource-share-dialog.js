@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { getPermissions, updatePermissions } from "./api.js";
 import "./components/dialog.js";
+import "./components/button.js";
 import { consumeMessages } from "./i18n.js";
 import { emitEvent } from "./page.js";
 import {
@@ -212,18 +213,17 @@ export class ResourceShareDialog extends LitElement {
           </div>
         </div>
         ${this.error ? html`<p class="error">${this.error}</p>` : nothing}
-        <button type="button" slot="actions" @click=${() => this.#close()}>
+        <account-button slot="actions" @click=${() => this.#close()}>
           ${this.#t("doCancel")}
-        </button>
-        <button
-          type="button"
-          class="primary"
+        </account-button>
+        <account-button
+          variant="primary"
           slot="actions"
           ?disabled=${this.busy}
           @click=${() => this.#submit()}
         >
           ${this.#t("share")}
-        </button>
+        </account-button>
       </account-dialog>
     `;
   }

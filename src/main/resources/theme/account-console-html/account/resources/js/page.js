@@ -28,7 +28,7 @@ export function label(t, name) {
 /**
  * Events dispatched by account page components via {@link emitEvent}.
  *
- * @typedef {"load" | "error" | "save" | "saved" | "action" | "sign-out" | "signed-out" | "end-session" | "remove-consent" | "removed" | "link" | "unlink" | "unlinked" | "issue" | "revoke" | "revoked" | "share" | "shared" | "unshare" | "unshared" | "update-permissions" | "permissions-updated" | "approve-request" | "deny-request"} AccountPageEventType
+ * @typedef {"load" | "error" | "save" | "saved" | "cancel" | "delete-account" | "update-email" | "action" | "sign-out" | "signed-out" | "end-session" | "remove-consent" | "removed" | "link" | "unlink" | "unlinked" | "issue" | "revoke" | "revoked" | "share" | "shared" | "unshare" | "unshared" | "update-permissions" | "permissions-updated" | "approve-request" | "deny-request"} AccountPageEventType
  */
 
 /**

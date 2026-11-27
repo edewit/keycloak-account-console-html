@@ -58,6 +58,14 @@ export class AccountLocaleField extends LitElement {
   /** @type {(event: Event) => void} */
   #onParentSaved = () => {
     this.disabled = false;
+    this.error = "";
+    this.#syncFromParent();
+  };
+
+  /** @type {(event: Event) => void} */
+  #onParentCancel = () => {
+    this.disabled = false;
+    this.error = "";
     this.#syncFromParent();
   };
 
@@ -96,6 +104,7 @@ export class AccountLocaleField extends LitElement {
     this.#parent?.addEventListener("load", this.#onParentLoad);
     this.#parent?.addEventListener("save", this.#onParentSave);
     this.#parent?.addEventListener("saved", this.#onParentSaved);
+    this.#parent?.addEventListener("cancel", this.#onParentCancel);
     this.#parent?.addEventListener("error", this.#onParentError);
     this.#syncFromParent();
     this.#loadLocales();
@@ -105,6 +114,7 @@ export class AccountLocaleField extends LitElement {
     this.#parent?.removeEventListener("load", this.#onParentLoad);
     this.#parent?.removeEventListener("save", this.#onParentSave);
     this.#parent?.removeEventListener("saved", this.#onParentSaved);
+    this.#parent?.removeEventListener("cancel", this.#onParentCancel);
     this.#parent?.removeEventListener("error", this.#onParentError);
     this.#parent = null;
     super.disconnectedCallback();

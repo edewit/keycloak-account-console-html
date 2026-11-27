@@ -77,6 +77,27 @@ export function displayName(raw) {
 }
 
 /**
+ * Translate a user-profile attribute label (`${email}` → t("email")).
+ *
+ * @param {(key: string, params?: Record<string, string | number>) => string} t
+ * @param {any} attribute
+ * @returns {string}
+ */
+export function attributeLabel(t, attribute) {
+  const raw = attribute?.displayName || attribute?.name || "";
+  if (typeof raw !== "string" || !raw) {
+    return "";
+  }
+  const key =
+    raw.startsWith("${") && raw.endsWith("}") ? raw.slice(2, -1) : raw;
+  const translated = t(key);
+  if (translated && translated !== key) {
+    return translated;
+  }
+  return displayName(raw);
+}
+
+/**
  * @param {(key: string, params?: Record<string, string | number>) => string} t
  * @param {unknown} value
  * @returns {string}
@@ -175,6 +196,7 @@ export function userProfileFieldErrors(errors, t) {
  * Map a user-profile attribute to primitive `<account-input>` props.
  *
  * @param {any} attribute
+ * @param {(key: string, params?: Record<string, string | number>) => string} [t]
  * @returns {{
  *   name: string,
  *   type: string,
@@ -185,7 +207,7 @@ export function userProfileFieldErrors(errors, t) {
  *   label: string,
  * }}
  */
-export function attributeToInputProps(attribute) {
+export function attributeToInputProps(attribute, t) {
   const options = attribute?.validators?.options?.options;
   return {
     name: attribute.name,
@@ -197,6 +219,8 @@ export function attributeToInputProps(attribute) {
       typeof attribute?.annotations?.inputTypePlaceholder === "string"
         ? attribute.annotations.inputTypePlaceholder
         : undefined,
-    label: displayName(attribute.displayName || attribute.name),
+    label: t
+      ? attributeLabel(t, attribute)
+      : displayName(attribute.displayName || attribute.name),
   };
 }

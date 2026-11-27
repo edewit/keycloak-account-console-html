@@ -8,6 +8,7 @@ import {
   renderLoading,
   renderMessage,
 } from "./page.js";
+import "./components/button.js";
 
 /**
  * @param {number} epochMs
@@ -172,36 +173,6 @@ export class SigningIn extends LitElement {
       flex-wrap: wrap;
       gap: 0.5rem;
       align-items: center;
-    }
-
-    button {
-      font: inherit;
-      cursor: pointer;
-      border: 1px solid var(--account-signing-border);
-      border-radius: var(--account-signing-radius);
-      padding: var(--account-signing-button-padding);
-      background: transparent;
-      color: inherit;
-    }
-
-    button.primary {
-      border-color: transparent;
-      background: var(--account-signing-button-bg);
-      color: var(--account-signing-button-fg);
-    }
-
-    button.danger {
-      border-color: var(--account-signing-error-color);
-      color: var(--account-signing-error-color);
-    }
-
-    button.link {
-      border: none;
-      padding: 0;
-      background: none;
-      color: inherit;
-      text-decoration: underline;
-      text-underline-offset: 0.15em;
     }
 
   `,
@@ -386,9 +357,8 @@ export class SigningIn extends LitElement {
         <div class="actions" part="actions">
           ${container.removeable && credential.id
             ? html`
-                <button
-                  class="danger"
-                  type="button"
+                <account-button
+                  variant="danger"
                   data-testrole="remove"
                   @click=${() =>
                     this.#runAction(`delete_credential:${credential.id}`, {
@@ -398,14 +368,13 @@ export class SigningIn extends LitElement {
                     })}
                 >
                   ${this.#t("delete")}
-                </button>
+                </account-button>
               `
             : nothing}
           ${container.updateAction
             ? html`
-                <button
-                  class="primary"
-                  type="button"
+                <account-button
+                  variant="primary"
                   data-testrole="update"
                   @click=${() =>
                     this.#runAction(container.updateAction, {
@@ -415,7 +384,7 @@ export class SigningIn extends LitElement {
                     })}
                 >
                   ${this.#t("update")}
-                </button>
+                </account-button>
               `
             : nothing}
         </div>
@@ -446,9 +415,8 @@ export class SigningIn extends LitElement {
           </div>
           ${container.createAction
             ? html`
-                <button
-                  class="link"
-                  type="button"
+                <account-button
+                  variant="link"
                   data-testid="${container.type}/create"
                   @click=${() =>
                     this.#runAction(container.createAction, {
@@ -457,7 +425,7 @@ export class SigningIn extends LitElement {
                     })}
                 >
                   ${this.#t("setUpNew", { name: typeLabel })}
-                </button>
+                </account-button>
               `
             : nothing}
         </div>
